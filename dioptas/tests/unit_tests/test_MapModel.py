@@ -144,14 +144,18 @@ class MapModelTest(unittest.TestCase):
         self.assertTrue(self.roi_letter in self.map_model.is_val_in_roi_range(val4))
 
     def test_calculate_roi_math(self):
-        math_to_perform = '(A + B)/2.0'
-        self.map_model.roi_math = math_to_perform
+        math_to_perform_a = '(A + B)/2.0'
+        math_to_perform_b = '(A * B)/(A + B)'
+        self.map_model.roi_maths[0] = math_to_perform_a
+        self.map_model.roi_maths.append(math_to_perform_b)
         sum_int = {'A': 1.3,
                    'B': 4.7}
-        result = self.map_model.calculate_roi_math(sum_int)
+        result = self.map_model.calculate_roi_maths(sum_int)
         for letter in sum_int:
-            math_to_perform = math_to_perform.replace(letter, str(sum_int[letter]))
-        self.assertEqual(result, eval(math_to_perform))
+            math_to_perform_a = math_to_perform_a.replace(letter, str(sum_int[letter]))
+            math_to_perform_b = math_to_perform_b.replace(letter, str(sum_int[letter]))
+        self.assertEqual(result[0], eval(math_to_perform_a))
+        self.assertEqual(result[1], eval(math_to_perform_b))
 
     def test_pos_to_range(self):
         min_hor = 0.14
@@ -207,8 +211,8 @@ class MapModelTest(unittest.TestCase):
         map_files = [f for f in os.listdir(map_path) if os.path.isfile(os.path.join(map_path, f))]
         self.test_organize_map_data()
         self.helper_add_roi_to_roi_list()
-        empty_map_image = self.map_model.new_image.copy()
+        empty_map_image = self.map_model.new_image[0].copy()
         self.assertTrue(not np.any(empty_map_image))
         self.map_model.check_roi_math()
         self.map_model.prepare_map_data()
-        self.assertFalse(np.array_equal(empty_map_image, self.map_model.new_image))
+        self.assertFalse(np.array_equal(empty_map_image, self.map_model.new_image[0]))
