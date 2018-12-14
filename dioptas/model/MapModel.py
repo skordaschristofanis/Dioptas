@@ -24,7 +24,8 @@ class MapModel(QtCore.QObject):
 
         self.map_data = {}
         self.map_roi_list = []
-        self.roi_math = ''
+        self.roi_maths = []
+        self.roi_maths.append('')
         self.theta_center = 5.9
         self.theta_range = 0.05
         self.num_hor = 0
@@ -34,6 +35,9 @@ class MapModel(QtCore.QObject):
         self.pix_per_ver = 100
         self.units = '2th_deg'
         self.wavelength = 3.344e-11
+
+        self.new_image = []
+
         self.all_positions_defined_in_files = False
         self.positions_set_manually = False
         self.map_uses_patterns = False
@@ -130,7 +134,10 @@ class MapModel(QtCore.QObject):
         self.hor_um_per_px = self.diff_hor / self.pix_per_hor
         self.ver_um_per_px = self.diff_ver / self.pix_per_ver
 
-        self.new_image = np.zeros([self.hor_size, self.ver_size])
+        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
+        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
+        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
+
         self.map_organized = True
 
     def check_map(self):
@@ -158,14 +165,15 @@ class MapModel(QtCore.QObject):
                 for roi_letter in roi_letters:
                     sum_int[roi_letter] += y_val
             try:
-                current_math = self.calculate_roi_math(sum_int)
+                current_math = self.calculate_roi_maths(sum_int)
             except SyntaxError:  # needed in case of problem with math
                 return
             range_hor = self.pos_to_range(float(self.map_data[map_item_name]['pos_hor']), self.min_hor,
                                           self.pix_per_hor, self.diff_hor)
             range_ver = self.pos_to_range(float(self.map_data[map_item_name]['pos_ver']), self.min_ver,
                                           self.pix_per_ver, self.diff_ver)
-            self.new_image[range_hor, range_ver] = current_math
+            for ind in range(len(self.roi_maths)):
+                self.new_image[ind][range_hor, range_ver] = current_math[ind]
 
     def update_map(self):
         if not self.all_positions_defined_in_files and not self.positions_set_manually:
@@ -185,17 +193,18 @@ class MapModel(QtCore.QObject):
         Returns: False if a ROI in the math is missing from the list.
 
         """
-        if self.roi_math == '':
-            for item in self.map_roi_list:
-                self.roi_math = self.roi_math + item['roi_letter'] + '+'
-            self.roi_math = self.roi_math.rsplit('+', 1)[0]
+        for ind, roi_math in enumerate(self.roi_maths):
+            if roi_math == '':
+                for item in self.map_roi_list:
+                    self.roi_maths[ind] = self.roi_maths[ind] + item['roi_letter'] + '+'
+                self.roi_maths[ind] = self.roi_maths[ind].rsplit('+', 1)[0]
 
-        rois_in_roi_math = re.findall('([A-Z])', self.roi_math)
-        for roi in rois_in_roi_math:
-            if not roi in [r['roi_letter'] for r in self.map_roi_list]:
-                self.roi_problem.emit()
-                return False
-        return True
+            rois_in_roi_math = re.findall('([A-Z])', roi_math)
+            for roi in rois_in_roi_math:
+                if not roi in [r['roi_letter'] for r in self.map_roi_list]:
+                    self.roi_problem.emit()
+                    return False
+            return True
 
     def is_val_in_roi_range(self, val):
         """
@@ -215,16 +224,32 @@ class MapModel(QtCore.QObject):
     def add_roi_to_roi_list(self, roi):
         self.map_roi_list.append(roi)
 
-    def calculate_roi_math(self, sum_int):
+    def calculate_roi_maths(self, sum_int):
         """
-        evaluates current_roi_math by replacing each ROI letter with the sum of the values in that range
+        Evaluates all the ROI maths
         Args:
             sum_int: dictionary containing the ROI letters
 
         Returns:
+            all evaluated ROI maths
+
+        """
+        current_roi_maths = []
+        for roi_math in self.roi_maths:
+            current_roi_maths.append(self.calculate_roi_math(sum_int, roi_math))
+        return current_roi_maths
+
+    def calculate_roi_math(self, sum_int, roi_math):
+        """
+        evaluates current_roi_math by replacing each ROI letter with the sum of the values in that range
+        Args:
+            sum_int: dictionary containing the ROI letters
+            roi_math: ROI math to be evaluated
+
+        Returns:
         evaluated current_roi_math
         """
-        current_roi_math = self.roi_math
+        current_roi_math = roi_math
         for roi_letter in sum_int:
             current_roi_math = current_roi_math.replace(roi_letter, str(sum_int[roi_letter]))
         return eval(current_roi_math)
@@ -320,7 +345,10 @@ class MapModel(QtCore.QObject):
         self.hor_um_per_px = self.diff_hor / self.pix_per_hor
         self.ver_um_per_px = self.diff_ver / self.pix_per_ver
 
-        self.new_image = np.zeros([self.hor_size, self.ver_size])
+        self.new_image = []
+        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
+        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
+        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
         self.positions_set_manually = True
 
     def sort_map_files_by_natural_name(self):

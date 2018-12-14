@@ -179,7 +179,7 @@ class MapController(object):
             roi_name = roi_full_name[1].split('-')
             self.map_model.add_roi_to_roi_list({'roi_letter': roi_full_name[0], 'roi_start': roi_name[0],
                                                 'roi_end': roi_name[1]})
-        self.map_model.roi_math = roi_math
+        self.map_model.roi_maths[0] = roi_math
         self.map_model.update_map()
         self.map_widget.map_loaded = True
 
@@ -361,7 +361,7 @@ class MapController(object):
         else:
             map_opacity = 1.0
         self.map_widget.map_image.setOpacity(map_opacity)
-        self.map_widget.map_image.setImage(self.map_model.new_image, True)
+        self.map_widget.map_image.setImage(self.map_model.new_image[0], True)
         self.auto_range()
         self.map_widget.map_loaded = True
         self.update_map_status_size_and_step_lbl()
