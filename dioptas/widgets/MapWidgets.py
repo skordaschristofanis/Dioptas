@@ -36,7 +36,7 @@ class Map2DWidget(QtWidgets.QWidget):
         self.update_map_btn = QtWidgets.QPushButton()
         self.lbl_map_pos = QtWidgets.QLabel()
         # Map Image and Histogram
-        self.map_image = pq.ImageItem()
+        self.map_image_a = pq.ImageItem()
 
         # Background for image
         self.bg_image = np.zeros([1920, 1200])
@@ -163,17 +163,17 @@ class Map2DWidget(QtWidgets.QWidget):
         self.map_view_box = self.hist_layout.addViewBox(0, 0, lockAspect=1.0)
 
         self.map_view_box.addItem(self.map_bg_image, ignoreBounds=True)  # MAPBG
-        self.map_view_box.addItem(self.map_image)
+        self.map_view_box.addItem(self.map_image_a)
         # self.map_hor_axis = pq.AxisItem(orientation='bottom')
         # self.hist_layout.addItem(self.map_hor_axis)
         # self.map_ver_axis = pq.AxisItem(orientation='left')
         # self.hist_layout.addItem(self.map_ver_axis)
-        self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
+        self.map_histogram_LUT = HistogramLUTItem(self.map_image_a, orientation='vertical')
         self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
-        self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
-        self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
-        self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
-        self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
+        # self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
+        # self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
+        # self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
+        # self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
 
         self.hbox.addWidget(self.hist_layout)
 

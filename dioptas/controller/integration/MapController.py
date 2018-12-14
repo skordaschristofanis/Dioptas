@@ -65,7 +65,7 @@ class MapController(object):
         self.map_widget.roi_math_c_cb.stateChanged.connect(self.roi_math_cb_state_changed)
         self.map_widget.roi_list.itemSelectionChanged.connect(self.roi_list_selection_changed)
 
-        self.map_widget.map_image.mouseClickEvent = self.myMouseClickEvent
+        self.map_widget.map_image_a.mouseClickEvent = self.myMouseClickEvent
         self.map_widget.hist_layout.scene().sigMouseMoved.connect(self.map_mouse_move_event)
         self.map_widget.map_view_box.mouseClickEvent = self.do_nothing
         self.map_widget.map_window_raised.connect(self.map_window_raised)
@@ -366,8 +366,8 @@ class MapController(object):
             map_opacity = self.map_widget.bg_opacity_slider.value()
         else:
             map_opacity = 1.0
-        self.map_widget.map_image.setOpacity(map_opacity)
-        self.map_widget.map_image.setImage(self.map_model.new_image[0], True)
+        self.map_widget.map_image_a.setOpacity(map_opacity)
+        self.map_widget.map_image_a.setImage(self.map_model.new_image[0], True)
         self.auto_range()
         self.map_widget.map_loaded = True
         self.update_map_status_size_and_step_lbl()
@@ -427,7 +427,7 @@ class MapController(object):
         return min(dist_sqr, key=dist_sqr.get)
 
     def map_mouse_move_event(self, pos):
-        pos = self.map_widget.map_image.mapFromScene(pos)
+        pos = self.map_widget.map_image_a.mapFromScene(pos)
         x = pos.x()
         y = pos.y()
         try:
@@ -533,7 +533,7 @@ class MapController(object):
 
     def modify_map_opacity(self):
         opacity = self.map_widget.bg_opacity_slider.value()/100.0
-        self.map_widget.map_image.setOpacity(opacity)
+        self.map_widget.map_image_a.setOpacity(opacity)
         self.map_widget.map_bg_image.setOpacity(1.0 - opacity)
 
     def clear_map(self):
