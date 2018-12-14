@@ -61,6 +61,8 @@ class MapController(object):
         self.map_widget.reset_zoom_btn.clicked.connect(self.reset_zoom_btn_clicked)
         self.map_widget.snapshot_btn.clicked.connect(self.snapshot_btn_clicked)
         self.map_widget.roi_math_a_txt.textEdited.connect(self.roi_math_txt_changed)
+        self.map_widget.roi_math_b_cb.stateChanged.connect(self.roi_math_cb_state_changed)
+        self.map_widget.roi_math_c_cb.stateChanged.connect(self.roi_math_cb_state_changed)
         self.map_widget.roi_list.itemSelectionChanged.connect(self.roi_list_selection_changed)
 
         self.map_widget.map_image.mouseClickEvent = self.myMouseClickEvent
@@ -344,6 +346,10 @@ class MapController(object):
         self.map_widget.old_roi_math_a_txt = roi_math_a_txt
         self.map_widget.roi_math_a_txt.setText(roi_math_a_txt)
         self.btn_update_map_clicked()
+
+    def roi_math_cb_state_changed(self):
+        self.map_widget.roi_math_b_txt.setEnabled(self.map_widget.roi_math_b_cb.isChecked())
+        self.map_widget.roi_math_c_txt.setEnabled(self.map_widget.roi_math_c_cb.isChecked())
 
     def reset_zoom_btn_clicked(self):
         self.map_widget.map_view_box.autoRange()

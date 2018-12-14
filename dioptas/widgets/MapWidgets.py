@@ -37,7 +37,6 @@ class Map2DWidget(QtWidgets.QWidget):
         self.lbl_map_pos = QtWidgets.QLabel()
         # Map Image and Histogram
         self.map_image = pq.ImageItem()
-        self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
 
         # Background for image
         self.bg_image = np.zeros([1920, 1200])
@@ -169,6 +168,10 @@ class Map2DWidget(QtWidgets.QWidget):
         # self.hist_layout.addItem(self.map_hor_axis)
         # self.map_ver_axis = pq.AxisItem(orientation='left')
         # self.hist_layout.addItem(self.map_ver_axis)
+        self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
+        self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
+        self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
+        self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
         self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
         self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
 
