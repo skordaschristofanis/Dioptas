@@ -60,7 +60,7 @@ class MapController(object):
         self.map_widget.bg_opacity_slider.valueChanged.connect(self.modify_map_opacity)
         self.map_widget.reset_zoom_btn.clicked.connect(self.reset_zoom_btn_clicked)
         self.map_widget.snapshot_btn.clicked.connect(self.snapshot_btn_clicked)
-        self.map_widget.roi_math_txt.textEdited.connect(self.roi_math_txt_changed)
+        self.map_widget.roi_math_a_txt.textEdited.connect(self.roi_math_txt_changed)
         self.map_widget.roi_list.itemSelectionChanged.connect(self.roi_list_selection_changed)
 
         self.map_widget.map_image.mouseClickEvent = self.myMouseClickEvent
@@ -171,7 +171,7 @@ class MapController(object):
 
     def btn_update_map_clicked(self):
         self.map_model.map_roi_list = []
-        roi_math = str(self.map_widget.roi_math_txt.text())
+        roi_math = str(self.map_widget.roi_math_a_txt.text())
         if not roi_math == '':
             self.map_widget.roi_list.selectAll()
         for item in self.map_widget.roi_list.selectedItems():
@@ -333,16 +333,16 @@ class MapController(object):
 
     def roi_math_txt_changed(self):
         existing_rois = []
-        roi_math_txt = str(self.map_widget.roi_math_txt.text()).upper()
-        roi_math_txt_rois = re.findall('[A-Z]', roi_math_txt)
+        roi_math_a_txt = str(self.map_widget.roi_math_a_txt.text()).upper()
+        roi_math_txt_rois = re.findall('[A-Z]', roi_math_a_txt)
         for row in range(self.map_widget.roi_list.count()):
             existing_rois.append(self.map_widget.roi_list.item(row).text().split('_')[0])
         for roi in roi_math_txt_rois:
             if roi not in existing_rois:
-                self.map_widget.roi_math_txt.setText(self.map_widget.old_roi_math_txt)
+                self.map_widget.roi_math_a_txt.setText(self.map_widget.old_roi_math_a_txt)
                 return
-        self.map_widget.old_roi_math_txt = roi_math_txt
-        self.map_widget.roi_math_txt.setText(roi_math_txt)
+        self.map_widget.old_roi_math_a_txt = roi_math_a_txt
+        self.map_widget.roi_math_a_txt.setText(roi_math_a_txt)
         self.btn_update_map_clicked()
 
     def reset_zoom_btn_clicked(self):

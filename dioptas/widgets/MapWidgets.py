@@ -26,7 +26,7 @@ class Map2DWidget(QtWidgets.QWidget):
         self.roi_num = 0  # number of existing ROIs
         self.roi_count = 0  # number of created ROIs, including deleted ones
         self.map_loaded = False
-        self.old_roi_math_txt = ''
+        self.old_roi_math_a_txt = ''
 
         # WIDGETS
         self.load_ascii_files_btn = QtWidgets.QPushButton("Load Ascii Files")
@@ -52,7 +52,12 @@ class Map2DWidget(QtWidgets.QWidget):
         self.roi_list = QtWidgets.QListWidget()
         self.roi_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.roi_math_lbl = QtWidgets.QLabel('Math:')
-        self.roi_math_txt = QtWidgets.QLineEdit()
+        self.roi_math_a_txt = QtWidgets.QLineEdit()
+        self.roi_math_b_cb = QtWidgets.QCheckBox()
+        self.roi_math_b_txt = QtWidgets.QLineEdit()
+        self.roi_math_c_cb = QtWidgets.QCheckBox()
+        self.roi_math_c_txt = QtWidgets.QLineEdit()
+
         self.roi_add_btn = QtWidgets.QPushButton()
         self.roi_add_phase_btn = QtWidgets.QPushButton()
         self.roi_del_btn = QtWidgets.QPushButton()
@@ -106,13 +111,17 @@ class Map2DWidget(QtWidgets.QWidget):
         self.map_status_positions_lbl.setStyleSheet('color: red')
         self.map_status_size_and_step_lbl.setStyleSheet('color: red')
         self.manual_map_positions_setup_btn.setToolTip('Load files and add range first')
+        self.roi_math_b_cb.setChecked(False)
+        self.roi_math_c_cb.setChecked(False)
+        self.roi_math_b_txt.setEnabled(False)
+        self.roi_math_c_txt.setEnabled(False)
 
         # Layout
         self.main_vbox = QtWidgets.QVBoxLayout()
         self.hbox = QtWidgets.QHBoxLayout()
         self.lbl_hbox = QtWidgets.QHBoxLayout()
         self.bg_hbox = QtWidgets.QHBoxLayout()
-        self.math_hbox = QtWidgets.QHBoxLayout()
+        self.math_grid = QtWidgets.QGridLayout()
         self.roi_vbox = QtWidgets.QVBoxLayout()
         self.update_hbox = QtWidgets.QHBoxLayout()
         self.status_hbox = QtWidgets.QHBoxLayout()
@@ -124,9 +133,13 @@ class Map2DWidget(QtWidgets.QWidget):
         self.roi_vbox.addLayout(self.update_hbox)
         self.roi_vbox.addWidget(self.roi_list)
 
-        self.math_hbox.addWidget(self.roi_math_lbl)
-        self.math_hbox.addWidget(self.roi_math_txt)
-        self.roi_vbox.addLayout(self.math_hbox)
+        self.math_grid.addWidget(self.roi_math_lbl, 0, 0, 1, 1)
+        self.math_grid.addWidget(self.roi_math_a_txt, 0, 1, 1, 1)
+        self.math_grid.addWidget(self.roi_math_b_cb, 1, 0, 1, 1)
+        self.math_grid.addWidget(self.roi_math_b_txt, 1, 1, 1, 1)
+        self.math_grid.addWidget(self.roi_math_c_cb, 2, 0, 1, 1)
+        self.math_grid.addWidget(self.roi_math_c_txt, 2, 1, 1, 1)
+        self.roi_vbox.addLayout(self.math_grid)
         self.roi_vbox.addLayout(self.roi_grid)
         self.hbox.addLayout(self.roi_vbox)
         self.hbox.addStretch(1)
