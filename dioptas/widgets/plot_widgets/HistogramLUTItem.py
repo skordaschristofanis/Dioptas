@@ -35,6 +35,12 @@ __all__ = ['HistogramLUTItem']
 # add grey_inverse to the list of color gradients:
 pyqtgraph.graphicsItems.GradientEditorItem.Gradients['grey_inverse'] = \
     {'ticks': [(0.0, (255, 255, 255, 255)), (1.0, (0, 0, 0, 255))], 'mode': 'rgb'}
+pyqtgraph.graphicsItems.GradientEditorItem.Gradients['red'] = \
+    {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}
+pyqtgraph.graphicsItems.GradientEditorItem.Gradients['green'] = \
+    {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 255, 0, 255))], 'mode': 'rgb'}
+pyqtgraph.graphicsItems.GradientEditorItem.Gradients['blue'] = \
+    {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}
 
 # set the error handling for numpy
 np.seterr(divide='ignore', invalid='ignore')

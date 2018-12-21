@@ -24,8 +24,7 @@ class MapModel(QtCore.QObject):
 
         self.map_data = {}
         self.map_roi_list = []
-        self.roi_maths = []
-        self.roi_maths.append('')
+        self.roi_maths = {}
         self.theta_center = 5.9
         self.theta_range = 0.05
         self.num_hor = 0
@@ -36,7 +35,7 @@ class MapModel(QtCore.QObject):
         self.units = '2th_deg'
         self.wavelength = 3.344e-11
 
-        self.new_image = []
+        self.new_image = {}
 
         self.all_positions_defined_in_files = False
         self.positions_set_manually = False
@@ -134,9 +133,9 @@ class MapModel(QtCore.QObject):
         self.hor_um_per_px = self.diff_hor / self.pix_per_hor
         self.ver_um_per_px = self.diff_ver / self.pix_per_ver
 
-        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
-        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
-        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
+        self.new_image['a'] = np.zeros([self.hor_size, self.ver_size])
+        self.new_image['b'] = np.zeros([self.hor_size, self.ver_size])
+        self.new_image['c'] = np.zeros([self.hor_size, self.ver_size])
 
         self.map_organized = True
 
@@ -172,8 +171,8 @@ class MapModel(QtCore.QObject):
                                           self.pix_per_hor, self.diff_hor)
             range_ver = self.pos_to_range(float(self.map_data[map_item_name]['pos_ver']), self.min_ver,
                                           self.pix_per_ver, self.diff_ver)
-            for ind in range(len(self.roi_maths)):
-                self.new_image[ind][range_hor, range_ver] = current_math[ind]
+            for roi_math_letter in self.roi_maths:
+                self.new_image[roi_math_letter][range_hor, range_ver] = current_math[roi_math_letter]
 
     def update_map(self):
         if not self.all_positions_defined_in_files and not self.positions_set_manually:
@@ -193,13 +192,13 @@ class MapModel(QtCore.QObject):
         Returns: False if a ROI in the math is missing from the list.
 
         """
-        for ind, roi_math in enumerate(self.roi_maths):
-            if roi_math == '':
+        for roi_math_letter in self.roi_maths:
+            if self.roi_maths[roi_math_letter] == '':
                 for item in self.map_roi_list:
-                    self.roi_maths[ind] = self.roi_maths[ind] + item['roi_letter'] + '+'
-                self.roi_maths[ind] = self.roi_maths[ind].rsplit('+', 1)[0]
+                    self.roi_maths[roi_math_letter] = self.roi_maths[roi_math_letter] + item['roi_letter'] + '+'
+                self.roi_maths[roi_math_letter] = self.roi_maths[roi_math_letter].rsplit('+', 1)[0]
 
-            rois_in_roi_math = re.findall('([A-Z])', roi_math)
+            rois_in_roi_math = re.findall('([A-Z])', self.roi_maths[roi_math_letter])
             for roi in rois_in_roi_math:
                 if not roi in [r['roi_letter'] for r in self.map_roi_list]:
                     self.roi_problem.emit()
@@ -234,9 +233,9 @@ class MapModel(QtCore.QObject):
             all evaluated ROI maths
 
         """
-        current_roi_maths = []
-        for roi_math in self.roi_maths:
-            current_roi_maths.append(self.calculate_roi_math(sum_int, roi_math))
+        current_roi_maths = {}
+        for roi_math_letter in self.roi_maths:
+            current_roi_maths[roi_math_letter] = self.calculate_roi_math(sum_int, self.roi_maths[roi_math_letter])
         return current_roi_maths
 
     def calculate_roi_math(self, sum_int, roi_math):
@@ -345,10 +344,10 @@ class MapModel(QtCore.QObject):
         self.hor_um_per_px = self.diff_hor / self.pix_per_hor
         self.ver_um_per_px = self.diff_ver / self.pix_per_ver
 
-        self.new_image = []
-        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
-        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
-        self.new_image.append(np.zeros([self.hor_size, self.ver_size]))
+        self.new_image = {}
+        self.new_image['a'] = np.zeros([self.hor_size, self.ver_size])
+        self.new_image['b'] = np.zeros([self.hor_size, self.ver_size])
+        self.new_image['c'] = np.zeros([self.hor_size, self.ver_size])
         self.positions_set_manually = True
 
     def sort_map_files_by_natural_name(self):

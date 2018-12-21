@@ -26,7 +26,10 @@ class Map2DWidget(QtWidgets.QWidget):
         self.roi_num = 0  # number of existing ROIs
         self.roi_count = 0  # number of created ROIs, including deleted ones
         self.map_loaded = False
-        self.old_roi_math_a_txt = ''
+        self.old_roi_math = {}
+        self.old_roi_math['a'] = ''
+        self.old_roi_math['b'] = ''
+        self.old_roi_math['c'] = ''
 
         # WIDGETS
         self.load_ascii_files_btn = QtWidgets.QPushButton("Load Ascii Files")
@@ -35,8 +38,11 @@ class Map2DWidget(QtWidgets.QWidget):
         self.auto_update_map_cb.setChecked(True)
         self.update_map_btn = QtWidgets.QPushButton()
         self.lbl_map_pos = QtWidgets.QLabel()
-        # Map Image and Histogram
-        self.map_image_a = pq.ImageItem()
+        # Map Image
+        self.map_image = {}
+        self.map_image['a'] = pq.ImageItem()
+        self.map_image['b'] = pq.ImageItem()
+        self.map_image['c'] = pq.ImageItem()
 
         # Background for image
         self.bg_image = np.zeros([1920, 1200])
@@ -51,11 +57,13 @@ class Map2DWidget(QtWidgets.QWidget):
         self.roi_list = QtWidgets.QListWidget()
         self.roi_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.roi_math_lbl = QtWidgets.QLabel('Math:')
-        self.roi_math_a_txt = QtWidgets.QLineEdit()
-        self.roi_math_b_cb = QtWidgets.QCheckBox()
-        self.roi_math_b_txt = QtWidgets.QLineEdit()
-        self.roi_math_c_cb = QtWidgets.QCheckBox()
-        self.roi_math_c_txt = QtWidgets.QLineEdit()
+        self.roi_math_txt = {}
+        self.roi_math_cb = {}
+        self.roi_math_txt['a'] = QtWidgets.QLineEdit()
+        self.roi_math_cb['b'] = QtWidgets.QCheckBox()
+        self.roi_math_txt['b'] = QtWidgets.QLineEdit()
+        self.roi_math_cb['c'] = QtWidgets.QCheckBox()
+        self.roi_math_txt['c'] = QtWidgets.QLineEdit()
 
         self.roi_add_btn = QtWidgets.QPushButton()
         self.roi_add_phase_btn = QtWidgets.QPushButton()
@@ -110,10 +118,12 @@ class Map2DWidget(QtWidgets.QWidget):
         self.map_status_positions_lbl.setStyleSheet('color: red')
         self.map_status_size_and_step_lbl.setStyleSheet('color: red')
         self.manual_map_positions_setup_btn.setToolTip('Load files and add range first')
-        self.roi_math_b_cb.setChecked(False)
-        self.roi_math_c_cb.setChecked(False)
-        self.roi_math_b_txt.setEnabled(False)
-        self.roi_math_c_txt.setEnabled(False)
+        self.roi_math_cb['b'].setChecked(False)
+        self.roi_math_cb['c'].setChecked(False)
+        self.roi_math_txt['b'].setEnabled(False)
+        self.roi_math_txt['c'].setEnabled(False)
+        for map_letter in self.map_image:
+            self.map_image[map_letter].setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
 
         # Layout
         self.main_vbox = QtWidgets.QVBoxLayout()
@@ -133,11 +143,11 @@ class Map2DWidget(QtWidgets.QWidget):
         self.roi_vbox.addWidget(self.roi_list)
 
         self.math_grid.addWidget(self.roi_math_lbl, 0, 0, 1, 1)
-        self.math_grid.addWidget(self.roi_math_a_txt, 0, 1, 1, 1)
-        self.math_grid.addWidget(self.roi_math_b_cb, 1, 0, 1, 1)
-        self.math_grid.addWidget(self.roi_math_b_txt, 1, 1, 1, 1)
-        self.math_grid.addWidget(self.roi_math_c_cb, 2, 0, 1, 1)
-        self.math_grid.addWidget(self.roi_math_c_txt, 2, 1, 1, 1)
+        self.math_grid.addWidget(self.roi_math_txt['a'], 0, 1, 1, 1)
+        self.math_grid.addWidget(self.roi_math_cb['b'], 1, 0, 1, 1)
+        self.math_grid.addWidget(self.roi_math_txt['b'], 1, 1, 1, 1)
+        self.math_grid.addWidget(self.roi_math_cb['c'], 2, 0, 1, 1)
+        self.math_grid.addWidget(self.roi_math_txt['c'], 2, 1, 1, 1)
         self.roi_vbox.addLayout(self.math_grid)
         self.roi_vbox.addLayout(self.roi_grid)
         self.hbox.addLayout(self.roi_vbox)
@@ -163,17 +173,24 @@ class Map2DWidget(QtWidgets.QWidget):
         self.map_view_box = self.hist_layout.addViewBox(0, 0, lockAspect=1.0)
 
         self.map_view_box.addItem(self.map_bg_image, ignoreBounds=True)  # MAPBG
-        self.map_view_box.addItem(self.map_image_a)
+        self.map_view_box.addItem(self.map_image['c'])
+        self.map_view_box.addItem(self.map_image['b'])
+        self.map_view_box.addItem(self.map_image['a'])
+
         # self.map_hor_axis = pq.AxisItem(orientation='bottom')
         # self.hist_layout.addItem(self.map_hor_axis)
         # self.map_ver_axis = pq.AxisItem(orientation='left')
         # self.hist_layout.addItem(self.map_ver_axis)
-        self.map_histogram_LUT = HistogramLUTItem(self.map_image_a, orientation='vertical')
-        self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
-        # self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
-        # self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
-        # self.map_histogram_LUT = HistogramLUTItem(self.map_image, orientation='vertical')
-        # self.hist_layout.addItem(self.map_histogram_LUT, 0, 1)
+        self.map_histogram_LUT = {}
+        self.map_histogram_LUT['a'] = HistogramLUTItem(self.map_image['a'], orientation='vertical')
+        self.hist_layout.addItem(self.map_histogram_LUT['a'], 0, 1)
+        self.map_histogram_LUT['a'].gradient.loadPreset('grey')
+        self.map_histogram_LUT['b'] = HistogramLUTItem(self.map_image['b'], orientation='vertical')
+        # self.hist_layout.addItem(self.map_histogram_LUT['b'], 0, 2)
+        self.map_histogram_LUT['b'].gradient.loadPreset('green')
+        self.map_histogram_LUT['c'] = HistogramLUTItem(self.map_image['c'], orientation='vertical')
+        # self.hist_layout.addItem(self.map_histogram_LUT['c'], 0, 3)
+        self.map_histogram_LUT['c'].gradient.loadPreset('blue')
 
         self.hbox.addWidget(self.hist_layout)
 

@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import re
 import os
+from functools import partial
 
 from .PhotoConfig import gsecars_photo
 from ...widgets.MapWidgets import Map2DWidget
@@ -60,12 +61,14 @@ class MapController(object):
         self.map_widget.bg_opacity_slider.valueChanged.connect(self.modify_map_opacity)
         self.map_widget.reset_zoom_btn.clicked.connect(self.reset_zoom_btn_clicked)
         self.map_widget.snapshot_btn.clicked.connect(self.snapshot_btn_clicked)
-        self.map_widget.roi_math_a_txt.textEdited.connect(self.roi_math_txt_changed)
-        self.map_widget.roi_math_b_cb.stateChanged.connect(self.roi_math_cb_state_changed)
-        self.map_widget.roi_math_c_cb.stateChanged.connect(self.roi_math_cb_state_changed)
+        self.map_widget.roi_math_txt['a'].textEdited.connect(partial(self.roi_math_txt_changed, math_letter='a'))
+        self.map_widget.roi_math_txt['b'].textEdited.connect(partial(self.roi_math_txt_changed, math_letter='b'))
+        self.map_widget.roi_math_txt['c'].textEdited.connect(partial(self.roi_math_txt_changed, math_letter='c'))
+        self.map_widget.roi_math_cb['b'].stateChanged.connect(partial(self.roi_math_cb_state_changed, math_letter='b'))
+        self.map_widget.roi_math_cb['c'].stateChanged.connect(partial(self.roi_math_cb_state_changed, math_letter='c'))
         self.map_widget.roi_list.itemSelectionChanged.connect(self.roi_list_selection_changed)
 
-        self.map_widget.map_image_a.mouseClickEvent = self.myMouseClickEvent
+        self.map_widget.map_image['a'].mouseClickEvent = self.myMouseClickEvent
         self.map_widget.hist_layout.scene().sigMouseMoved.connect(self.map_mouse_move_event)
         self.map_widget.map_view_box.mouseClickEvent = self.do_nothing
         self.map_widget.map_window_raised.connect(self.map_window_raised)
@@ -173,15 +176,22 @@ class MapController(object):
 
     def btn_update_map_clicked(self):
         self.map_model.map_roi_list = []
-        roi_math = str(self.map_widget.roi_math_a_txt.text())
-        if not roi_math == '':
+        self.map_model.roi_maths = {}
+        roi_math_a = str(self.map_widget.roi_math_txt['a'].text())
+        roi_math_b = str(self.map_widget.roi_math_txt['b'].text())
+        roi_math_c = str(self.map_widget.roi_math_txt['c'].text())
+        if not roi_math_a == '':
             self.map_widget.roi_list.selectAll()
         for item in self.map_widget.roi_list.selectedItems():
             roi_full_name = item.text().split('_')
             roi_name = roi_full_name[1].split('-')
             self.map_model.add_roi_to_roi_list({'roi_letter': roi_full_name[0], 'roi_start': roi_name[0],
                                                 'roi_end': roi_name[1]})
-        self.map_model.roi_maths[0] = roi_math
+        self.map_model.roi_maths['a'] = roi_math_a
+        if self.map_widget.roi_math_cb['b'].isChecked():
+            self.map_model.roi_maths['b'] = roi_math_b
+        if self.map_widget.roi_math_cb['c'].isChecked():
+            self.map_model.roi_maths['c'] = roi_math_c
         self.map_model.update_map()
         self.map_widget.map_loaded = True
 
@@ -333,23 +343,32 @@ class MapController(object):
     def btn_roi_select_all_clicked(self):
         self.map_widget.roi_list.selectAll()
 
-    def roi_math_txt_changed(self):
+    def roi_math_txt_changed(self, math_letter):
         existing_rois = []
-        roi_math_a_txt = str(self.map_widget.roi_math_a_txt.text()).upper()
-        roi_math_txt_rois = re.findall('[A-Z]', roi_math_a_txt)
+        roi_math_txt = str(self.map_widget.roi_math_txt[math_letter].text()).upper()
+        roi_math_txt_rois = re.findall('[A-Z]', roi_math_txt)
         for row in range(self.map_widget.roi_list.count()):
             existing_rois.append(self.map_widget.roi_list.item(row).text().split('_')[0])
         for roi in roi_math_txt_rois:
             if roi not in existing_rois:
-                self.map_widget.roi_math_a_txt.setText(self.map_widget.old_roi_math_a_txt)
+                self.map_widget.roi_math_txt[math_letter].setText(self.map_widget.old_roi_math[math_letter])
                 return
-        self.map_widget.old_roi_math_a_txt = roi_math_a_txt
-        self.map_widget.roi_math_a_txt.setText(roi_math_a_txt)
+        self.map_widget.old_roi_math[math_letter] = roi_math_txt
+        self.map_widget.roi_math_txt[math_letter].setText(roi_math_txt)
         self.btn_update_map_clicked()
 
-    def roi_math_cb_state_changed(self):
-        self.map_widget.roi_math_b_txt.setEnabled(self.map_widget.roi_math_b_cb.isChecked())
-        self.map_widget.roi_math_c_txt.setEnabled(self.map_widget.roi_math_c_cb.isChecked())
+    def roi_math_cb_state_changed(self, math_letter):
+        # TODO: Make sure that when state is changed that the map is updated.
+        # TODO: Add colors next to the Math lines
+        self.map_widget.roi_math_txt[math_letter].setEnabled(self.map_widget.roi_math_cb[math_letter].isChecked())
+        if self.map_widget.roi_math_cb[math_letter].isChecked():
+            self.map_widget.hist_layout.addItem(self.map_widget.map_histogram_LUT[math_letter])
+        else:
+            self.map_widget.hist_layout.removeItem(self.map_widget.map_histogram_LUT[math_letter])
+        if self.map_widget.roi_math_cb['b'].isChecked() or self.map_widget.roi_math_cb['c'].isChecked():
+            self.map_widget.map_histogram_LUT['a'].gradient.loadPreset('red')
+        else:
+            self.map_widget.map_histogram_LUT['a'].gradient.loadPreset('grey')
 
     def reset_zoom_btn_clicked(self):
         self.map_widget.map_view_box.autoRange()
@@ -362,22 +381,47 @@ class MapController(object):
         exporter.export(snapshot_filename)
 
     def update_map_image(self):
+        # map_image_normal = 1.0 + int(self.map_widget.roi_math_cb['b'].isChecked()) + \
+        #                    int(self.map_widget.roi_math_cb['c'].isChecked())
+        map_image_normal = 1.0
         if self.bg_image is not None:
-            map_opacity = self.map_widget.bg_opacity_slider.value()
+            map_opacity = self.map_widget.bg_opacity_slider.value()/map_image_normal
         else:
-            map_opacity = 1.0
-        self.map_widget.map_image_a.setOpacity(map_opacity)
-        self.map_widget.map_image_a.setImage(self.map_model.new_image[0], True)
+            map_opacity = 1.0/map_image_normal
+        self.map_widget.map_image['a'].setOpacity(map_opacity)
+        self.map_widget.map_image['a'].setImage(self.map_model.new_image['a'], True)
+        if self.map_widget.roi_math_cb['b'].isChecked():
+            self.map_widget.map_image['b'].setOpacity(map_opacity)
+            self.map_widget.map_image['b'].setImage(self.map_model.new_image['b'], True)
+        else:
+            self.map_widget.map_image['b'].setOpacity(0)
+        if self.map_widget.roi_math_cb['c'].isChecked():
+            self.map_widget.map_image['c'].setOpacity(map_opacity)
+            self.map_widget.map_image['c'].setImage(self.map_model.new_image['c'], True)
+        else:
+            self.map_widget.map_image['c'].setOpacity(0)
         self.auto_range()
         self.map_widget.map_loaded = True
         self.update_map_status_size_and_step_lbl()
 
     # Auto-range for map image
     def auto_range(self):
-        hist_x, hist_y = self.map_widget.map_histogram_LUT.hist_x, self.map_widget.map_histogram_LUT.hist_y
+        hist_x, hist_y = self.map_widget.map_histogram_LUT['a'].hist_x, self.map_widget.map_histogram_LUT['a'].hist_y
         min_level = hist_x[0]
         max_level = hist_x[-1]
-        self.map_widget.map_histogram_LUT.setLevels(min_level, max_level)
+        self.map_widget.map_histogram_LUT['a'].setLevels(min_level, max_level)
+
+        if self.map_widget.roi_math_cb['b'].isChecked():
+            hist_x, hist_y = self.map_widget.map_histogram_LUT['b'].hist_x, self.map_widget.map_histogram_LUT['b'].hist_y
+            min_level = hist_x[0]
+            max_level = hist_x[-1]
+            self.map_widget.map_histogram_LUT['b'].setLevels(min_level, max_level)
+
+        if self.map_widget.roi_math_cb['c'].isChecked():
+            hist_x, hist_y = self.map_widget.map_histogram_LUT['c'].hist_x, self.map_widget.map_histogram_LUT['c'].hist_y
+            min_level = hist_x[0]
+            max_level = hist_x[-1]
+            self.map_widget.map_histogram_LUT['c'].setLevels(min_level, max_level)
 
     def convert_all_units(self, previous_unit, new_unit, wavelength):
         # also, use this for converting the range if the file is in another unit.
@@ -427,7 +471,7 @@ class MapController(object):
         return min(dist_sqr, key=dist_sqr.get)
 
     def map_mouse_move_event(self, pos):
-        pos = self.map_widget.map_image_a.mapFromScene(pos)
+        pos = self.map_widget.map_image['a'].mapFromScene(pos)
         x = pos.x()
         y = pos.y()
         try:
@@ -533,7 +577,7 @@ class MapController(object):
 
     def modify_map_opacity(self):
         opacity = self.map_widget.bg_opacity_slider.value()/100.0
-        self.map_widget.map_image_a.setOpacity(opacity)
+        self.map_widget.map_image['a'].setOpacity(opacity)  # TODO Fix this so it works with all other colors
         self.map_widget.map_bg_image.setOpacity(1.0 - opacity)
 
     def clear_map(self):
