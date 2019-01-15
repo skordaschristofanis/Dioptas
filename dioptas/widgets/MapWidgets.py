@@ -121,7 +121,9 @@ class Map2DWidget(QtWidgets.QWidget):
         self.roi_math_cb['b'].setChecked(False)
         self.roi_math_cb['c'].setChecked(False)
         self.roi_math_txt['b'].setEnabled(False)
+        self.roi_math_txt['b'].setStyleSheet('color: green')
         self.roi_math_txt['c'].setEnabled(False)
+        self.roi_math_txt['c'].setStyleSheet('color: blue')
         for map_letter in self.map_image:
             self.map_image[map_letter].setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
 

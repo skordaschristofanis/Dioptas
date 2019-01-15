@@ -358,8 +358,6 @@ class MapController(object):
         self.btn_update_map_clicked()
 
     def roi_math_cb_state_changed(self, math_letter):
-        # TODO: Make sure that when state is changed that the map is updated.
-        # TODO: Add colors next to the Math lines
         self.map_widget.roi_math_txt[math_letter].setEnabled(self.map_widget.roi_math_cb[math_letter].isChecked())
         if self.map_widget.roi_math_cb[math_letter].isChecked():
             self.map_widget.hist_layout.addItem(self.map_widget.map_histogram_LUT[math_letter])
@@ -367,8 +365,11 @@ class MapController(object):
             self.map_widget.hist_layout.removeItem(self.map_widget.map_histogram_LUT[math_letter])
         if self.map_widget.roi_math_cb['b'].isChecked() or self.map_widget.roi_math_cb['c'].isChecked():
             self.map_widget.map_histogram_LUT['a'].gradient.loadPreset('red')
+            self.map_widget.roi_math_txt['a'].setStyleSheet('color: red')
         else:
             self.map_widget.map_histogram_LUT['a'].gradient.loadPreset('grey')
+            self.map_widget.roi_math_txt['a'].setStyleSheet('color: black')
+        self.btn_update_map_clicked()
 
     def reset_zoom_btn_clicked(self):
         self.map_widget.map_view_box.autoRange()
@@ -577,7 +578,9 @@ class MapController(object):
 
     def modify_map_opacity(self):
         opacity = self.map_widget.bg_opacity_slider.value()/100.0
-        self.map_widget.map_image['a'].setOpacity(opacity)  # TODO Fix this so it works with all other colors
+        self.map_widget.map_image['a'].setOpacity(opacity)
+        self.map_widget.map_image['b'].setOpacity(opacity)
+        self.map_widget.map_image['c'].setOpacity(opacity)
         self.map_widget.map_bg_image.setOpacity(1.0 - opacity)
 
     def clear_map(self):
