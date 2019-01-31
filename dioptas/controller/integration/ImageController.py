@@ -271,9 +271,8 @@ class ImageController(object):
         # MAP2D
         if self.widget.img_batch_mode_map_rb.isChecked():
             self.model.map_model.map_images_loaded.emit()
-
-        for pattern_header, pattern_header_value in zip(self.widget.pattern_headers, pattern_headers_values):
-            pattern_header.setChecked(pattern_header_value)
+            for pattern_header, pattern_header_value in zip(self.widget.pattern_headers, pattern_headers_values):
+                pattern_header.setChecked(pattern_header_value)
 
         progress_dialog.close()
         self._tear_down_batch_processing()
