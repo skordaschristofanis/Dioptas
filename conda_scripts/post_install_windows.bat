@@ -1,3 +1,3 @@
-;;  post install for windows
 
-%PREFIX%\bin\dioptas makeshortcut
+%PREFIX%\Scripts\dioptas.exe -m
+

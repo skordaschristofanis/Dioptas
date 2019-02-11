@@ -1,3 +1,3 @@
 #/bin/bash
 
-$PREFIX/bin/dioptas makeshortcut
+$PREFIX/bin/dioptas -m
