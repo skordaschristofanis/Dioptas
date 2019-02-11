@@ -107,3 +107,43 @@ def main():
     controller.show_window()
     app.exec_()
     del app
+
+def dioptas_cli():
+    """wrapper around running main program or
+    create desktop shortcut
+    """
+    usage = "usage: %prog [options] file(s)"
+    from optparse import OptionParser
+    try:
+        from pyshortcuts import make_shortcut, platform
+    except ImportError:
+        make_shortcut = platform = None
+
+    parser = OptionParser(usage=usage, prog="dioptas",
+                          version="dioptas command-line version %s" % dioptas_version)
+
+    parser.add_option("-m", "--makeicons", dest="makeicons", action="store_true",
+                      default=False, help="create desktop icons")
+
+    (options, args) = parser.parse_args()
+
+    # create desktop icons
+    if options.makeicons and make_shortcut is not None:
+        name = 'dioptas'
+        desc = 'GUI program for reduction and exploration of 2D X-ray diffraction data'
+
+        bindir = 'bin'
+        if platform.startswith('win'):
+            bindir = 'Scripts'
+
+        script = os.path.join(sys.prefix, bindir, 'dioptas')
+
+        icon_ext = 'ico'
+        if platform.startswith('darwin'):
+            icon_ext = 'icns'
+        icon = '%s.%s' % (os.path.join(icons_path, 'icon'), icon_ext)
+
+        make_shortcut(script, name=name, description=desc,
+                      terminal=True, icon=icon)
+    else:
+        main()
