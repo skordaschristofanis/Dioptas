@@ -6,6 +6,7 @@ channels:
     - http://repo.continuum.io/pkgs/free
     - http://repo.continuum.io/pkgs/msys2 [win]
     - https://conda.anaconda.org/cprescher/
+    - https://conda.anaconda.org/gsecars/
 
 specs:
     - python
@@ -35,6 +36,7 @@ specs:
     - fabio>=0.6.0
     - pyfai>=0.15.0
     - lmfit
+    - pyshortcuts
     - dioptas
 
 ## someday, hopefully!
