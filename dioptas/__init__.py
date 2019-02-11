@@ -45,7 +45,6 @@ icons_path = os.path.join(resources_path, 'icons')
 data_path = os.path.join(resources_path, 'data')
 style_path = os.path.join(resources_path, 'style')
 
-from ._desktop_shortcuts import make_shortcut
 
 from .widgets.UtilityWidgets import ErrorMessageBox
 
