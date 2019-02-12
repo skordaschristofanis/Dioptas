@@ -4,7 +4,6 @@ package:
     version: 0.4.3.gsecars
 
 source:
-    git_rev: develop
     git_url: https://github.com/erangre/Dioptas
     git_tag: dioptas_gsecars
 
@@ -30,6 +29,7 @@ requirements:
         - future
         - scikit-image
         - qtpy
+        - pyshortcuts
 
     run:
         - python
@@ -46,6 +46,7 @@ requirements:
         - future
         - scikit-image
         - qtpy
+        - pyshortcuts
 
 test:
     imports:
