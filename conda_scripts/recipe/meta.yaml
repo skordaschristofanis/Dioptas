@@ -1,14 +1,15 @@
 
 package:
     name: dioptas
-    version: 0.4.1.post1
+    version: 0.4.3.gsecars
 
 source:
     git_rev: develop
-    git_url: https://github.com/newville/Dioptas
+    git_url: https://github.com/erangre/Dioptas
+    git_tag: dioptas_gsecars
 
 build:
-  number: 0
+  number: 1
   script: python setup.py install
 
 requirements:
