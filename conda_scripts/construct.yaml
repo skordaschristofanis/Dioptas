@@ -37,7 +37,7 @@ specs:
     - pyfai
     - lmfit
     - pyshortcuts
-    - dioptas
+    - dioptas>=0.4.3
 
 ## someday, hopefully!
 ## installer_type: pkg # [osx]
