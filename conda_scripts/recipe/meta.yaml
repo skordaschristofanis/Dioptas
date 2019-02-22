@@ -8,7 +8,7 @@ source:
     git_tag: dioptas_gsecars
 
 build:
-  number: 1
+  number: 2
   script: python setup.py install
 
 requirements:
