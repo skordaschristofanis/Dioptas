@@ -5,7 +5,7 @@ channels:
     - http://repo.continuum.io/pkgs/main
     - http://repo.continuum.io/pkgs/free
     - http://repo.continuum.io/pkgs/msys2 [win]
-    - https://conda.anaconda.org/cprescher/
+    ## - https://conda.anaconda.org/cprescher/
     - https://conda.anaconda.org/gsecars/
 
 specs:
@@ -37,7 +37,7 @@ specs:
     - pyfai
     - lmfit
     - pyshortcuts
-    - dioptas>=0.4.3
+    - dioptas
 
 ## someday, hopefully!
 ## installer_type: pkg # [osx]
