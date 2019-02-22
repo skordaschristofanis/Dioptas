@@ -107,6 +107,7 @@ def main():
     app.exec_()
     del app
 
+
 def dioptas_cli():
     """wrapper around running main program or
     create desktop shortcut
