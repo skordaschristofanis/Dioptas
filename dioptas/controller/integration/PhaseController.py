@@ -27,6 +27,8 @@ from ...model.PhaseModel import PhaseLoadError
 from ...model.util.HelperModule import get_base_name
 from .JcpdsEditorController import JcpdsEditorController
 from ...widgets.UtilityWidgets import save_file_dialog, open_file_dialog, open_files_dialog
+from ...model.util.HelperModule import get_partial_index, get_partial_value
+from ...model.util.calc import convert_units
 
 # imports for type hinting in PyCharm -- DO NOT DELETE
 from ...model.DioptasModel import DioptasModel
@@ -54,6 +56,7 @@ class PhaseController(object):
         self.integration_widget = integration_widget
         self.phase_widget = self.integration_widget.phase_widget
         self.pattern_widget = self.integration_widget.pattern_widget
+        self.img_view_widget = self.integration_widget.integration_image_widget.img_view
         self.cif_conversion_dialog = CifConversionParametersDialog(self.integration_widget)
         self.model = dioptas_model
         self.jcpds_editor_controller = JcpdsEditorController(self.integration_widget, self.model)
@@ -206,10 +209,31 @@ class PhaseController(object):
                 x_range, y_range,
                 self.model.calibration_model.wavelength * 1e10,
                 self.get_unit())
+
         color = self.pattern_widget.add_phase(self.model.phase_model.phases[-1].name,
                                               positions,
                                               intensities,
                                               baseline)
+
+        cake_positions = []
+        cake_x_data = convert_units(self.model.cake_tth, self.model.calibration_model.wavelength, '2th_deg',
+                                    self.model.integration_unit)
+        for pos in positions:
+            pos_ind = get_partial_index(cake_x_data, pos)
+            if pos_ind is None:
+                pos_ind = len(self.model.cake_tth) + 1
+            cake_positions.append(pos_ind)
+        self.img_view_widget.add_cake_phase(
+            self.model.phase_model.phases[-1].name,
+            cake_positions,
+            intensities,
+            baseline)
+        if self.integration_widget.img_mode == 'Cake':
+            self.img_view_widget.phases[-1].show()
+        else:
+            self.img_view_widget.phases[-1].hide()
+        cake_x_range = (0, len(self.model.cake_tth))
+        self.img_view_widget.update_phase_line_visibilities(cake_x_range)
         return color
 
     def edit_btn_click_callback(self):
@@ -229,6 +253,7 @@ class PhaseController(object):
     def phase_removed(self, ind):
         self.phase_widget.del_phase(ind)
         self.pattern_widget.del_phase(ind)
+        self.img_view_widget.del_cake_phase(ind)
         if self.jcpds_editor_controller.active:
             ind = self.phase_widget.get_selected_phase_row()
             if ind >= 0:
@@ -370,13 +395,16 @@ class PhaseController(object):
         else:
             color = str(previous_color.name())
         self.pattern_widget.set_phase_color(ind, color)
+        self.img_view_widget.set_cake_phase_color(ind, color)
         button.setStyleSheet('background-color:' + color)
 
     def show_cb_state_changed(self, ind, state):
         if state:
             self.pattern_widget.show_phase(ind)
+            self.img_view_widget.show_cake_phase(ind)
         else:
             self.pattern_widget.hide_phase(ind)
+            self.img_view_widget.hide_cake_phase(ind)
 
     def phase_tw_header_section_clicked(self, ind):
         if ind != 0:
@@ -410,6 +438,11 @@ class PhaseController(object):
         # QtWidgets.QApplication.processEvents()
         # self.update_phase_lines_slot()
         self.pattern_widget.update_phase_line_visibilities()
+        try:
+            cake_range = (0, len(self.model.cake_tth))
+            self.img_view_widget.update_phase_line_visibilities(cake_range)
+        except TypeError:
+            pass
 
     def update_all_phase_intensities(self):
         """
@@ -441,6 +474,16 @@ class PhaseController(object):
 
         self.pattern_widget.update_phase_intensities(
             ind, positions, intensities, y_range[0])
+        cake_positions = []
+        cake_x_data = convert_units(self.model.cake_tth, self.model.calibration_model.wavelength, '2th_deg',
+                                    self.model.integration_unit)
+        for pos in positions:
+            pos_ind = get_partial_index(cake_x_data, pos)
+            if pos_ind is None:
+                pos_ind = len(self.model.cake_tth) + 1
+            cake_positions.append(pos_ind)
+        self.img_view_widget.update_phase_intensities(
+            ind, cake_positions, intensities, y_range[0])
 
     ###JCPDS editor callbacks:
     def update_jcpds_editor(self, cur_ind=None):
@@ -453,8 +496,10 @@ class PhaseController(object):
         cur_ind = self.phase_widget.get_selected_phase_row()
         self.model.phase_model.phases[cur_ind] = jcpds
         self.pattern_widget.phases[cur_ind].clear_lines()
+        self.img_view_widget.phases[cur_ind].clear_lines()
         for dummy_line_ind in self.model.phase_model.phases[cur_ind].reflections:
             self.pattern_widget.phases[cur_ind].add_line()
+            self.img_view_widget.phases[cur_ind].add_line()
         self.update_cur_phase_parameters()
 
     def update_cur_phase_parameters(self):
@@ -462,18 +507,23 @@ class PhaseController(object):
         self.model.phase_model.get_lines_d(cur_ind)
         self.update_phase_intensities(cur_ind)
         self.pattern_widget.update_phase_line_visibility(cur_ind)
+        cake_range = (0, len(self.model.cake_tth))
+        self.img_view_widget.update_phase_line_visibility(cur_ind, cake_range)
 
     def jcpds_editor_reflection_removed(self, reflection_ind):
         cur_phase_ind = self.phase_widget.get_selected_phase_row()
         self.pattern_widget.phases[cur_phase_ind].remove_line(reflection_ind)
+        self.img_view_widget.phases[cur_phase_ind].remove_line(reflection_ind)
         self.model.phase_model.get_lines_d(cur_phase_ind)
         self.update_phase_intensities(cur_phase_ind)
 
     def jcpds_editor_reflection_added(self):
         cur_ind = self.phase_widget.get_selected_phase_row()
         self.pattern_widget.phases[cur_ind].add_line()
+        self.img_view_widget.phases[cur_ind].add_line()
         self.model.phase_model.get_lines_d(cur_ind)
 
     def jcpds_editor_reflection_cleared(self):
         cur_phase_ind = self.phase_widget.get_selected_phase_row()
         self.pattern_widget.phases[cur_phase_ind].clear_lines()
+        self.img_view_widget.phases[cur_phase_ind].clear_lines()
