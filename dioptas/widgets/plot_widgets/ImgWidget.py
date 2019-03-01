@@ -21,7 +21,7 @@
 from __future__ import absolute_import
 
 import pyqtgraph as pg
-from pyqtgraph import ViewBox
+from pyqtgraph import ViewBox, GraphicsLayoutWidget
 from pyqtgraph.exporters.ImageExporter import ImageExporter
 import numpy as np
 from skimage.measure import find_contours
@@ -38,7 +38,7 @@ class ImgWidget(QtCore.QObject):
 
     def __init__(self, pg_layout, orientation='vertical'):
         super(ImgWidget, self).__init__()
-        self.pg_layout = pg_layout
+        self.pg_layout = pg_layout  # type: GraphicsLayoutWidget
 
         self.create_graphics()
         self.set_orientation(orientation)

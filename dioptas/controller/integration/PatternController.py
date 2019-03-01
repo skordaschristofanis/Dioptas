@@ -28,6 +28,7 @@ from ...model.util.calc import convert_units
 
 # imports for type hinting in PyCharm -- DO NOT DELETE
 from ...model.DioptasModel import DioptasModel
+from ...widgets.integration import IntegrationWidget
 
 
 class PatternController(object):
@@ -101,6 +102,7 @@ class PatternController(object):
 
         # pattern_plot auto range functions
         self.widget.pattern_auto_range_btn.clicked.connect(self.pattern_auto_range_btn_click_callback)
+        self.widget.pattern_link_to_cake_btn.clicked.connect(self.pattern_link_to_cake_btn_click_callback)
         self.widget.pattern_widget.auto_range_status_changed.connect(self.widget.pattern_auto_range_btn.setChecked)
 
         # pattern_plot antialias
@@ -287,6 +289,25 @@ class PatternController(object):
 
     def pattern_auto_range_btn_click_callback(self):
         self.widget.pattern_widget.auto_level = self.widget.pattern_auto_range_btn.isChecked()
+
+    def pattern_link_to_cake_btn_click_callback(self):
+        if self.widget.pattern_link_to_cake_btn.isChecked():
+            # The first option was this. It almost works, but it takes the 2-Theta value and uses it as an index limit for the cake view. e.g. max 2theta=30 then it will show 30 pixels in the cake view.
+            # also, coudlnt' find a way to unlink
+            # self.widget.pattern_widget.view_box.setXLink(self.widget.integration_image_widget.img_view.img_view_box)
+
+            # The 2nd option links the x-axis properly, so that the 2-Theta ranges agree, but it doesn't adjust the image zoom.
+            # self.widget.integration_image_widget.img_view.bottom_axis_cake.linkToView(
+            #     self.widget.pattern_widget.view_box)
+
+            # The third option is like the 2nd option but at least the unlink works. Still it uses the 2theta as index for cake view.
+            self.widget.pattern_widget.view_box.linkView(
+                self.widget.integration_image_widget.img_view.img_view_box.XAxis,
+                self.widget.integration_image_widget.img_view.img_view_box)
+        else:
+            self.widget.pattern_widget.view_box.linkView(
+                self.widget.integration_image_widget.img_view.img_view_box.XAxis,
+                None)
 
     def update_line_position(self, previous_unit, new_unit):
         cur_line_pos = self.widget.pattern_widget.pos_line.getPos()[0]

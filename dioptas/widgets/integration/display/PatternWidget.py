@@ -71,6 +71,7 @@ class IntegrationPatternWidget(QtWidgets.QWidget):
         self.background_btn = CheckableFlatButton('bg')
         self.background_inspect_btn = CheckableFlatButton('I')
         self.antialias_btn = CheckableFlatButton('AA')
+        self.link_to_cake_btn = CheckableFlatButton('CL')
         self.auto_range_btn = CheckableFlatButton('A')
 
         self._right_control_layout.addWidget(self.tth_btn)
@@ -82,6 +83,7 @@ class IntegrationPatternWidget(QtWidgets.QWidget):
         self._right_control_layout.addSpacerItem(VerticalSpacerItem())
         self._right_control_layout.addWidget(self.antialias_btn)
         self._right_control_layout.addSpacerItem(VerticalSpacerItem())
+        self._right_control_layout.addWidget(self.link_to_cake_btn)
         self._right_control_layout.addWidget(self.auto_range_btn)
 
         self.right_control_widget.setLayout(self._right_control_layout)
@@ -110,6 +112,7 @@ class IntegrationPatternWidget(QtWidgets.QWidget):
         self.tth_btn.setChecked(True)
         self.antialias_btn.setChecked(True)
         self.auto_range_btn.setChecked(True)
+        self.link_to_cake_btn.setChecked(False)
 
         self.setStyleSheet("""
             #pattern_frame, #pattern_right_control_widget, QLabel {

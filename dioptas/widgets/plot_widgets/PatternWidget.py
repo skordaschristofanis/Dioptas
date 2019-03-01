@@ -28,6 +28,7 @@ from pyqtgraph.exporters.SVGExporter import SVGExporter
 
 from .ExLegendItem import LegendItem
 from ...model.util.HelperModule import calculate_color
+from pyqtgraph import ViewBox
 
 
 class PatternWidget(QtCore.QObject):
@@ -55,7 +56,7 @@ class PatternWidget(QtCore.QObject):
         self.pattern_plot.setLabel('bottom', u'2θ', u'°')
         self.pattern_plot.enableAutoRange(False)
         self.pattern_plot.buttonsHidden = True
-        self.view_box = self.pattern_plot.vb
+        self.view_box = self.pattern_plot.vb  # type: ViewBox
         self.legend = LegendItem(horSpacing=20, box=False, verSpacing=-3, labelAlignment='right', showLines=False)
         self.phases_legend = LegendItem(horSpacing=20, box=False, verSpacing=-3, labelAlignment='left', showLines=False)
 
