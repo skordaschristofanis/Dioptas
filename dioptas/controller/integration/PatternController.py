@@ -300,7 +300,7 @@ class PatternController(object):
             # self.widget.integration_image_widget.img_view.bottom_axis_cake.linkToView(
             #     self.widget.pattern_widget.view_box)
 
-            # The third option is like the 2nd option but at least the unlink works. Still it uses the 2theta as index for cake view.
+            # The third option is like the 1st option but at least the unlink works. Still it uses the 2theta as index for cake view.
             self.widget.pattern_widget.view_box.linkView(
                 self.widget.integration_image_widget.img_view.img_view_box.XAxis,
                 self.widget.integration_image_widget.img_view.img_view_box)
