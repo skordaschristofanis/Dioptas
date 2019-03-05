@@ -30,6 +30,8 @@ requirements:
         - scikit-image
         - qtpy
         - pyshortcuts
+        - cython
+        - vs2015_runtime
 
     run:
         - python
@@ -47,6 +49,8 @@ requirements:
         - scikit-image
         - qtpy
         - pyshortcuts
+        - cython
+        - vs2015_runtime
 
 test:
     imports:
