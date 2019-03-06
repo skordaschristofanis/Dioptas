@@ -1,5 +1,5 @@
 name:  dioptas
-version: 0.4.5.gsecars
+version: 0.5.0.gsecars
 
 channels:
     - http://repo.continuum.io/pkgs/main
