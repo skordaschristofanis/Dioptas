@@ -26,7 +26,7 @@ __version__ = get_versions()['version']
 del get_versions
 
 if __version__ == "0+unknown":
-    __version__ = "0.4.4"
+    __version__ = "0.5.0"
 
 import sys
 import os
@@ -47,6 +47,7 @@ icons_path = os.path.join(resources_path, 'icons')
 data_path = os.path.join(resources_path, 'data')
 style_path = os.path.join(resources_path, 'style')
 
+from ._desktop_shortcuts import make_shortcut
 
 from .widgets.UtilityWidgets import ErrorMessageBox
 
@@ -96,7 +97,7 @@ def excepthook(exc_type, exc_value, traceback_obj):
 
 def main():
     app = QtWidgets.QApplication([])
-   # sys.excepthook = excepthook
+    sys.excepthook = excepthook
     from sys import platform as _platform
     from .controller.MainController import MainController
     print("Dioptas {}".format(__version__))
