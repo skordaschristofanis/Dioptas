@@ -35,6 +35,7 @@ from ...model.DioptasModel import DioptasModel
 from ...widgets.integration import IntegrationWidget
 from ...widgets.UtilityWidgets import CifConversionParametersDialog
 from ...widgets.UtilityWidgets import save_file_dialog, open_file_dialog
+from ...widgets.plot_widgets.ImgWidget import IntegrationImgWidget
 
 
 class PhaseController(object):
@@ -56,7 +57,7 @@ class PhaseController(object):
         self.integration_widget = integration_widget
         self.phase_widget = self.integration_widget.phase_widget
         self.pattern_widget = self.integration_widget.pattern_widget
-        self.img_view_widget = self.integration_widget.integration_image_widget.img_view
+        self.img_view_widget = self.integration_widget.integration_image_widget.img_view  # type: IntegrationImgWidget
         self.cif_conversion_dialog = CifConversionParametersDialog(self.integration_widget)
         self.model = dioptas_model
         self.jcpds_editor_controller = JcpdsEditorController(self.integration_widget, self.model)
@@ -410,7 +411,8 @@ class PhaseController(object):
     def show_cb_state_changed(self, ind, state):
         if state:
             self.pattern_widget.show_phase(ind)
-            self.img_view_widget.show_cake_phase(ind)
+            if self.integration_widget.img_mode == 'Cake' and self.integration_widget.img_phases_btn.isChecked():
+                self.img_view_widget.show_cake_phase(ind)
         else:
             self.pattern_widget.hide_phase(ind)
             self.img_view_widget.hide_cake_phase(ind)
