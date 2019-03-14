@@ -30,6 +30,8 @@ def convert_units(value, wavelength, previous_unit, new_unit):
     :param new_unit: possible values are '2th_deg', 'q_A^-1', 'd_A'
     :return: new value or None if unit does not exist
     """
+    if value is None:
+        value = 10.0
     if previous_unit == '2th_deg':
         tth = value
     elif previous_unit == 'q_A^-1':
