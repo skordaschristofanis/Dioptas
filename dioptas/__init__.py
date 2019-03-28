@@ -89,6 +89,7 @@ def excepthook(exc_type, exc_value, traceback_obj):
         f.close()
     except IOError:
         pass
+    print(msg)
     errorbox = ErrorMessageBox()
     errorbox.setText(str(notice) + str(msg) + str(version_info))
     errorbox.exec_()
