@@ -26,7 +26,7 @@ __version__ = get_versions()['version']
 del get_versions
 
 if __version__ == "0+unknown":
-    __version__ = "0.5.3.gsecars"
+    __version__ = "0.5.4.gsecars"
 
 import sys
 import os
