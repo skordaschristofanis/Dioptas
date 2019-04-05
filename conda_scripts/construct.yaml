@@ -38,8 +38,6 @@ specs:
     - lmfit
     - pyshortcuts
     - dioptas
-    - cython
-    - vs2015_runtime
 
 ## someday, hopefully!
 ## installer_type: pkg # [osx]
