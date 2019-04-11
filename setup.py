@@ -4,7 +4,7 @@ from numpy.distutils.core import Extension, setup
 
 import versioneer
 
-with_bruckner_cython = True
+with_bruckner_cython = False
 with_bruckner_f95 = False
 
 ext_modules = []
@@ -28,7 +28,7 @@ setup(
     author_email="clemens.prescher@gmail.com",
     url='https://github.com/Dioptas/Dioptas/',
     install_requires=['numpy', 'qtpy', 'pyqtgraph',
-                      'scipy', 'lmfit', 'pyshortcuts', 'cython'],
+                      'scipy', 'lmfit', 'pyshortcuts'],
     description='GUI program for reduction and exploration of 2D X-ray diffraction data',
     classifiers=['Intended Audience :: Science/Research',
                  'Operating System :: OS Independent',
