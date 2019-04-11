@@ -924,6 +924,7 @@ class ImageController(object):
             if filename.endswith('.png'):
                 if self.widget.img_mode == 'Cake':
                     self.widget.img_widget.deactivate_vertical_line()
+                    self.widget.img_widget.deactivate_mouse_click_item()
                 elif self.widget.img_mode == 'Image':
                     self.widget.img_widget.deactivate_circle_scatter()
                     self.widget.img_widget.deactivate_roi()
@@ -933,6 +934,7 @@ class ImageController(object):
 
                 if self.widget.img_mode == 'Cake':
                     self.widget.img_widget.activate_vertical_line()
+                    self.widget.img_widget.activate_mouse_click_item()
                 elif self.widget.img_mode == 'Image':
                     self.widget.img_widget.activate_circle_scatter()
                     if self.roi_active:
