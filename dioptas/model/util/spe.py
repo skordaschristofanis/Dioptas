@@ -318,8 +318,13 @@ class SpeFile(object):
             for n in range(self.num_frames - 1):
                 img_temp.append(self._read_frame())
             self.img = img_temp
-        # if type(self.img) == list:
-        #     self.img = self.img[0]
+        if type(self.img) == list:
+            self.series_max = len(self.img)
+        else:
+            self.series_max = 1
+
+    def get_img(self, image_nr):
+        return self.img[image_nr]
 
     def _read_frame(self, pos=None):
         """Reads in a frame at a specific binary position. The following parameters have to

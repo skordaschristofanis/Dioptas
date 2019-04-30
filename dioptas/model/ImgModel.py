@@ -194,7 +194,9 @@ class ImgModel(QtCore.QObject):
         """
         if os.path.splitext(filename)[1].lower() == '.spe':
             spe = SpeFile(filename)
-            return {"image_data": spe.img}
+            return {"image_data": spe.get_img(0),
+                    "series_max": spe.series_max,
+                    "series_get_image": spe.get_img}
         else:
             return None
 
