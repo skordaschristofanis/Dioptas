@@ -299,7 +299,7 @@ class SpeFile(object):
         try:
             self.x_calibration = self.x_calibration[self.roi_x: self.roi_x + self.roi_width]
         except AttributeError:
-            print("SPE File bad!")
+            print("SPE File has no calibration")
 
     def _read_datatype(self):
         self._data_type = self._read_at(108, 1, np.uint16)[0]
@@ -318,8 +318,8 @@ class SpeFile(object):
             for n in range(self.num_frames - 1):
                 img_temp.append(self._read_frame())
             self.img = img_temp
-        if type(self.img) == list:
-            self.img = self.img[0]
+        # if type(self.img) == list:
+        #     self.img = self.img[0]
 
     def _read_frame(self, pos=None):
         """Reads in a frame at a specific binary position. The following parameters have to
