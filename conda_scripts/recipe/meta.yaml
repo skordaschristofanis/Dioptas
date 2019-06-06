@@ -1,14 +1,14 @@
 
 package:
     name: dioptas
-    version: 0.5.4.gsecars
+    version: 0.5.5.gsecars
 
 source:
     git_url: https://github.com/erangre/Dioptas
     git_tag: dioptas_gsecars
 
 build:
-  number: 2
+  number: 1
   script: python setup.py install
 
 requirements:
