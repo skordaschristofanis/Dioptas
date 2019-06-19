@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-# Dioptas - GUI program for fast processing of 2D X-ray data
-# Copyright (C) 2017  Clemens Prescher (clemens.prescher@gmail.com)
-# Institute for Geology and Mineralogy, University of Cologne
+# Dioptas - GUI program for fast processing of 2D X-ray diffraction data
+# Principal author: Clemens Prescher (clemens.prescher@gmail.com)
+# Copyright (C) 2014-2019 GSECARS, University of Chicago, USA
+# Copyright (C) 2015-2018 Institute for Geology and Mineralogy, University of Cologne, Germany
+# Copyright (C) 2019 DESY, Hamburg, Germany
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -58,7 +60,6 @@ class IntegrationWidget(QtWidgets.QWidget):
         self.vertical_splitter.addWidget(self.integration_control_widget)
         self.vertical_splitter.addWidget(self.integration_pattern_widget)
         self.vertical_splitter.setStretchFactor(1, 99999)
-
 
         self.vertical_splitter_left = QtWidgets.QSplitter(self)
         self.vertical_splitter_left.setOrientation(QtCore.Qt.Vertical)
@@ -240,11 +241,13 @@ class IntegrationWidget(QtWidgets.QWidget):
         self.img_roi_btn = image_widget.roi_btn
         self.img_mode_btn = image_widget.mode_btn
         self.img_mask_btn = image_widget.mask_btn
+        self.img_phases_btn = image_widget.phases_btn
         self.cake_shift_azimuth_sl = image_widget.cake_shift_azimuth_sl
         self.mask_transparent_cb = image_widget.transparent_cb
         self.img_autoscale_btn = image_widget.autoscale_btn
         self.img_dock_btn = image_widget.undock_btn
         self.img_widget = image_widget.img_view
+        self.cake_widget = image_widget.cake_view
         self.img_show_background_subtracted_btn = image_widget.show_background_subtracted_img_btn
 
         self.frame_img_positions_widget = self.integration_image_widget.position_and_unit_widget

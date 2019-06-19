@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-# Dioptas - GUI program for fast processing of 2D X-ray data
-# Copyright (C) 2017  Clemens Prescher (clemens.prescher@gmail.com)
-# Institute for Geology and Mineralogy, University of Cologne
+# Dioptas - GUI program for fast processing of 2D X-ray diffraction data
+# Principal author: Clemens Prescher (clemens.prescher@gmail.com)
+# Copyright (C) 2014-2019 GSECARS, University of Chicago, USA
+# Copyright (C) 2015-2018 Institute for Geology and Mineralogy, University of Cologne, Germany
+# Copyright (C) 2019 DESY, Hamburg, Germany
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -468,6 +470,8 @@ class CifPhase(object):
 
     def get_symmetry_from_space_group_number(self, number):
         if number is not None:
+            if number in [146, 148, 155, 160, 161, 166, 167]:
+                return "RHOMBOHEDRAL"
             if number_between(number, 1, 2):
                 return "TRICLINIC"
             if number_between(number, 3, 15):

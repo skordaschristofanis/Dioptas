@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-# Dioptas - GUI program for fast processing of 2D X-ray data
-# Copyright (C) 2017  Clemens Prescher (clemens.prescher@gmail.com)
-# Institute for Geology and Mineralogy, University of Cologne
+# Dioptas - GUI program for fast processing of 2D X-ray diffraction data
+# Principal author: Clemens Prescher (clemens.prescher@gmail.com)
+# Copyright (C) 2014-2019 GSECARS, University of Chicago, USA
+# Copyright (C) 2015-2018 Institute for Geology and Mineralogy, University of Cologne, Germany
+# Copyright (C) 2019 DESY, Hamburg, Germany
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -211,7 +213,8 @@ class BackgroundController(object):
 
     def update_bkg_pattern_linear_region(self):
         self.widget.pattern_widget.linear_region_item.blockSignals(True)
-        self.widget.pattern_widget.set_linear_region(*self.widget.get_bkg_pattern_roi())
+        self.widget.pattern_widget.set_linear_region(
+            *self.widget.integration_control_widget.background_control_widget.get_bkg_pattern_roi())
         self.widget.pattern_widget.linear_region_item.blockSignals(False)
 
     def update_bkg_image_widgets(self):
@@ -225,6 +228,7 @@ class BackgroundController(object):
         self.widget.bkg_pattern_gb.blockSignals(True)
         self.widget.qa_bkg_pattern_btn.blockSignals(True)
         self.widget.bkg_pattern_gb.setChecked(self.model.pattern.auto_background_subtraction)
+        self.widget.qa_bkg_pattern_inspect_btn.setVisible(self.model.pattern.auto_background_subtraction)
         self.widget.qa_bkg_pattern_btn.setChecked(self.model.pattern.auto_background_subtraction)
         self.widget.bkg_pattern_gb.blockSignals(False)
         self.widget.qa_bkg_pattern_btn.blockSignals(False)
