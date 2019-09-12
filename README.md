@@ -1,4 +1,4 @@
-This is a testing branch for jcpds5 development
+This is a branch for jcpds5 development
 ----------
 
 The main new feature of the jcpds5 format is that it allows to describe the PVT EOS using different formulations, either existing or user defined. 
