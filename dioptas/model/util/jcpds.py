@@ -31,16 +31,27 @@ Modifications:
         - renamed read and write to load and save
         - the load function will now reset all parameters (previously parameters not set in the newly loaded file, were
           taken over from the previous state of the object)
+    August 8, 2019 Ross Hrubiak
+        - upgrading to jcpds 5, this format includes an "EOS" field for more robust thermal eqution of state handling.
+          Added param['z'] (formula units per unit cell) field to jcpds files, useful for converting Molar volume to volume 
+          (most PVT equation of state formulations work with molar volume). Keeping the old thermal EOS method as well for 
+          backward compatibility.
 
 """
 import logging
 
 logger = logging.getLogger(__name__)
 
-import string
+import string, json
 import numpy as np
 from scipy.optimize import minimize
 import os
+
+from burnman.eos.equation_of_state import EquationOfState
+from burnman.eos.helper import create as create_eos
+from .birch_murnaghan_thermal import JCPDS4
+from .eos_definitions import equations_of_state
+
 
 
 class jcpds_reflection:
@@ -67,16 +78,22 @@ class jcpds_reflection:
     def __str__(self):
         return "{:2d},{:2d},{:2d}\t{:.2f}\t{:.3f}".format(self.h, self.k, self.l, self.intensity, self.d0)
 
+    def get_hkl(self):
+        return "%d%d%d"%(self.h,self.k,self.l)
+
+    def get_hkl_list(self):
+        return [self.h,self.k,self.l]
 
 class MyDict(dict):
     def __init__(self):
         super(MyDict, self).__init__()
         self.setdefault('modified', False)
 
+    # jcpds V5 (added 'eos' to list)
     def __setitem__(self, key, value):
         if key in ['comments', 'a0', 'b0', 'c0', 'alpha0', 'beta0', 'gamma0',
                    'symmetry', 'k0', 'k0p0', 'dk0dt', 'dk0pdt',
-                   'alpha_t0', 'd_alpha_dt', 'reflections']:
+                   'alpha_t0', 'd_alpha_dt', 'reflections', 'eos']:
             self.__setitem__('modified', True)
         super(MyDict, self).__setitem__(key, value)
 
@@ -113,7 +130,24 @@ class jcpds(object):
         self.params['pressure'] = 0.
         self.params['temperature'] = 298.
         self.reflections = []
+
+        # jcpds V5 stuff
+        self.params['z'] = None
+        self.params['eos'] = {}
+        self.EOS = {} # placeholder for different types of eos
+        self.jcpds4_params_template = {'equation_of_state':'jcpds4',
+                                        'V_0':0, 
+                                        'K_0':0, 
+                                        'Kprime_0':0,
+                                        'dk0dt':0, 
+                                        'dk0pdt':0,
+                                        'alpha_t0':0,
+                                        'd_alpha_dt':0}
+
         self.params['modified'] = False
+
+    def has_EOS(self):
+        return len(self.EOS)
 
     def load_file(self, filename):
         """
@@ -243,6 +277,17 @@ class jcpds(object):
                     self.params['alpha_t0'] = float(value)
                 elif tag == 'DALPHADT:':
                     self.params['d_alpha_dt'] = float(value)
+
+                # jcpds V5
+                elif tag == 'Z:':
+                    self.params['z'] = float(value)
+                elif tag == 'EOS:':
+                    try:
+                        params = json.loads(value)
+                        self.set_EOS(params)
+                    except:
+                        pass   
+
                 elif tag == 'DIHKL:':
                     dtemp = value.split()
                     dtemp = list(map(float, dtemp))
@@ -290,6 +335,15 @@ class jcpds(object):
                 self.reflections.append(reflection)
 
         fp.close()
+
+        # jcpds V5
+        if self.params['z'] is None:
+            self.params['z'] = 1
+        if len(self.params['eos']) == 0:
+            # grab eos parameters from legacy jcpds4 fields
+            params = self.get_params_from_jcpds4_fields(self.jcpds4_params_template)
+            self.set_EOS(params)
+
         self.compute_v0()
         self.params['a'] = self.params['a0']
         self.params['b'] = self.params['b0']
@@ -336,6 +390,15 @@ class jcpds(object):
         """
         fp = open(filename, 'w')
         fp.write('VERSION:   4\n')
+
+        # jcpds V5
+        for key in self.EOS:
+            eos = self.EOS[key]
+            # v = 5 if an EOS is specified (other than jcpds4 style)
+            if eos.params['equation_of_state'] != 'jcpds4':
+                ver = 'VERSION:   5\n'
+                break
+
         for comment in self.params['comments']:
             fp.write('COMMENT: ' + comment + '\n')
         fp.write('K0:       ' + str(self.params['k0']) + '\n')
@@ -352,6 +415,20 @@ class jcpds(object):
         fp.write('VOLUME:   ' + str(self.params['v0']) + '\n')
         fp.write('ALPHAT:   ' + str(self.params['alpha_t0']) + '\n')
         fp.write('DALPHADT: ' + str(self.params['d_alpha_dt']) + '\n')
+
+        # jcpds V5
+        for key in self.EOS:
+            eos = self.EOS[key]
+            # only write Z: line if an EOS is specified (other than jcpds4 style)
+            if eos.params['equation_of_state'] != 'jcpds4':
+                fp.write('Z: ' + str(self.params['z']) + '\n')
+                break
+        for key in self.EOS:
+            eos = self.EOS[key]
+            if eos.params['equation_of_state'] != 'jcpds4':
+                s = 'EOS: ' + json.dumps(repair_dict(eos.params)) + '\n'
+                fp.write(s)
+
         reflections = self.get_reflections()
         for r in reflections:
             fp.write('DIHKL:    {0:g}\t{1:g}\t{2:g}\t{3:g}\t{4:g}\n'.format(r.d0, r.intensity, r.h, r.k, r.l))
@@ -464,6 +541,15 @@ class jcpds(object):
                                  np.cos(self.params['beta0'] * dtor) *
                                  np.cos(self.params['gamma0'] * dtor))))
 
+        # jcpds V5
+        for key in self.EOS:
+            eos = self.EOS[key]
+            vm = round(self.V_to_Vm(self.params['v0']),9)
+            if hasattr(eos, 'params'):
+                eos.params['V_0'] = vm
+            else:
+                eos.params = {'V_0':vm}
+
     def compute_volume(self, pressure=None, temperature=None):
         """
         Computes the unit cell volume of the material.
@@ -509,59 +595,29 @@ class jcpds(object):
         # Assume 0 K really means room T
         if temperature == 0: temperature = 298.
         # Compute values of K0, K0P and alphat at this temperature
-        self.params['alpha_t'] = self.params['alpha_t0'] + self.params['d_alpha_dt'] * (temperature - 298.)
-        self.params['k0p'] = self.params['k0p0'] + self.params['dk0pdt'] * (temperature - 298.)
+        # Assume 0 K really means room T
+        if temperature == 0: temperature = 298.
+        # Compute values of K0, K0P and alphat at this temperature
+        
+        if not self.has_EOS():
+            if self.params['z'] is None:
+                self.params['z'] = 1
+            if len(self.params['eos']) == 0:
+                # grab eos parameters from legacy jcpds4 fields
+                params = self.get_params_from_jcpds4_fields(self.jcpds4_params_template)
+                self.set_EOS(params)
 
-        if pressure == 0.:
-            self.params['v'] = self.params['v0'] * (1 + self.params['alpha_t'] * (temperature - 298.))
-        if pressure < 0:
-            if self.params['k0'] <= 0.:
-                logger.info('K0 is zero, computing zero pressure volume')
-                self.params['v'] = self.params['v0']
-            else:
-                self.params['v'] = self.params['v0'] * (1 - pressure / self.params['k0'])
-        else:
-            if self.params['k0'] <= 0.:
-                logger.info('K0 is zero, computing zero pressure volume')
-                self.params['v'] = self.params['v0']
-            else:
-                self.mod_pressure = pressure - \
-                                    self.params['alpha_t'] * self.params['k0'] * (temperature - 298.)
-                res = minimize(self.bm3_inverse, 1.)
-                self.params['v'] = self.params['v0'] / np.float(res.x)
+        try:
+            # Note: params['eos'] values are in SI units, i.e. Pa, not GPa
+            volume_m = self.volume_calc(pressure*1e9,temperature,self.params['eos'])
+            volume = self.Vm_to_V(volume_m)
+            self.params['vm'] = volume_m 
+        except:
+            volume = self.params['v0']
+        
+        self.params['v'] = volume
 
-    def bm3_inverse(self, v0_v):
-        """
-        Returns the value of the third order Birch-Murnaghan equation minus
-        pressure.  It is used to solve for V0/V for a given
-           P, K0 and K0'.
-
-        Inputs:
-           v0_v:   The ratio of the zero pressure volume to the high pressure
-                   volume
-        Outputs:
-           This function returns the value of the third order Birch-Murnaghan
-           equation minus pressure.  \
-
-        Procedure:
-           This procedure simply computes the pressure using V0/V, K0 and K0',
-           and then subtracts the input pressure.
-
-        Example:
-           Compute the difference of the calculated pressure and 100 GPa for
-           V0/V=1.3 for alumina
-           jcpds = obj_new('JCPDS')
-           jcpds->read_file,  'alumina.jcpds'
-           common bm3_common mod_pressure, k0, k0p
-           mod_pressure=100
-           k0 = 100
-           k0p = 4.
-           diff = jcpds_bm3_inverse(1.3)
-        """
-
-        return (1.5 * self.params['k0'] * (v0_v ** (7. / 3.) - v0_v ** (5. / 3.)) *
-                (1 + 0.75 * (self.params['k0p'] - 4.) * (v0_v ** (2. / 3.) - 1.0)) -
-                self.mod_pressure) ** 2
+    
 
     def compute_d0(self):
         """
@@ -789,9 +845,141 @@ class jcpds(object):
         sorted_ind = np.argsort(d_list)
         self.reorder_reflections_by_index(sorted_ind, reversed_toggle)
 
-    def has_thermal_expansion(self):
-        return (self.params['alpha_t0'] != 0) or (self.params['d_alpha_dt'] != 0)
 
+    # jcpds V5 
+    def has_thermal_expansion(self):
+        if 'alpha_t0' in self.params['eos']:
+            if self.params['eos']['alpha_t0'] !=0:
+                return True
+        if 'grueneisen_0' in self.params['eos']:
+            if self.params['eos']['grueneisen_0'] !=0:
+                return True
+
+        return (self.params['alpha_t0'] != 0) \
+                or (self.params['d_alpha_dt'] != 0)
+
+    # jcpds V5 
+    def set_EOS(self, params):
+        
+        eos = params['equation_of_state']
+        if eos in self.EOS:
+            self.params['eos']= self.EOS[eos].params
+            self.volume_calc = self.EOS[eos].volume
+            self.pressure_calc = self.EOS[eos].pressure
+        else:
+            required_keys = list(equations_of_state[eos]['params'].keys())
+            required_params = {}
+            for key in required_keys:
+                if 'default' in equations_of_state[eos]['params'][key]:
+                    default = equations_of_state[eos]['params'][key]['default']
+                else:
+                    default = 0
+                required_params[key] = default
+            required_params['equation_of_state'] = eos
+            for key in required_params:
+                if not key in params:
+                    params[key] = required_params[key]
+            if eos == 'jcpds4':
+                self.EOS[eos] = JCPDS4()
+            else:
+                self.EOS[eos] = create_eos(eos)
+            params = self.get_params_from_jcpds4_fields(params)
+            try:
+                # params need to include the require fields
+                self.EOS[eos].validate_parameters(params)
+            except KeyError as err:
+                print(err.args)
+
+            for key in params:
+                self.set_eos_param(eos,key, params[key])
+            
+            self.params['eos']= self.EOS[eos].params
+            self.volume_calc = self.EOS[eos].volume
+            self.pressure_calc = self.EOS[eos].pressure
+        
+    def set_eos_param(self, eos, key, param):
+        if key == 'V_0':
+            # V_0 is computed from the lattice parameters, V_0 in EOS is ignored
+            param = self.V_to_Vm(self.params['v0'])
+        if hasattr(self.EOS[eos], 'params'):
+            self.EOS[eos].params[key] = param
+        else:
+            self.EOS[eos].params = {key:param}
+        # for jcpds4 legacy support
+        self.set_param_to_jcpds4_field(key, param)
+
+    def set_z(self, z):
+        self.params['z'] = z
+        v0m = self.V_to_Vm(self.params['v0'])    
+        for key in self.EOS:
+            eos = self.EOS[key]
+            eos.params['V_0'] = v0m
+
+    def set_param_to_jcpds4_field(self, key, param):
+        
+        if 'K_0' == key:    
+            # Note: params['eos'] values are in SI units, i.e. Pa, not GPa
+            self.params['k0'] = round(param * 1e-9,3)
+        if 'Kprime_0' == key:
+            self.params['k0p0'] = param
+        if 'dk0dt' == key:
+            self.params['dk0dt'] = param
+        if 'dk0pdt' == key:
+            self.params['dk0pdt'] = param
+        if 'alpha_t0' == key:
+            self.params['alpha_t0'] = param
+        if 'd_alpha_dt' == key:
+            self.params['d_alpha_dt'] = param
+        
+
+    def get_params_from_jcpds4_fields(self, params):
+        if 'V_0' in params:
+            if params['V_0'] == 0:
+                self.compute_v0()
+                params['V_0'] = self.V_to_Vm(self.params['v0'])
+        if 'K_0' in params:    
+            if params['K_0'] == 0:
+                # Note: params['eos'] values are in SI units, i.e. Pa, not GPa
+                params['K_0'] = self.params['k0']*1e9
+        if 'Kprime_0' in params:
+            if params['Kprime_0'] == 0:
+                params['Kprime_0'] = self.params['k0p0']
+        if 'dk0dt' in params:
+            if params['dk0dt'] == 0:
+                params['dk0dt'] = self.params['dk0dt']
+        if 'dk0pdt' in params:
+            if params['dk0pdt'] == 0:
+                params['dk0pdt'] = self.params['dk0pdt']
+        if 'alpha_t0' in params:
+            if params['alpha_t0'] == 0:
+                params['alpha_t0'] = self.params['alpha_t0']
+        if 'd_alpha_dt' in params:
+            if params['d_alpha_dt'] == 0:
+                params['d_alpha_dt'] = self.params['d_alpha_dt']
+        return params
+
+    # for PVT EOS compatibility, we need to convert to molar volumes 
+    def Vm_to_V(self, Vm):
+        v = Vm * self.params['z']/ 6.02214076e-7
+        return v
+
+    def V_to_Vm(self, V):
+        Vm = V/self.params['z']*6.02214076e-7
+        return Vm
+
+
+# jcpds V5
+def repair_dict( d):
+    d_new = {}
+    for key in d:
+        item = d[key]
+        NaN = float('nan')
+        if type(item) == str:
+            d_new[key]=item
+        else:
+            if not np.isnan(item):
+                d_new[key]=item
+    return d_new
 
 def lookup_jcpds_line(in_string,
                       pressure=0.,

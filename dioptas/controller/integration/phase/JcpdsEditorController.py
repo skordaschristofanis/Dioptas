@@ -123,26 +123,7 @@ class JcpdsEditorController(QtCore.QObject):
         self.jcpds_widget.lattice_angle_step_txt.editingFinished.connect(self.lattice_angle_step_changed)
         self.jcpds_widget.lattice_ratio_step_txt.editingFinished.connect(self.lattice_ratio_step_changed)
 
-        # Equation of state fields
-        self.jcpds_widget.eos_K_txt.editingFinished.connect(partial(self.param_txt_changed,
-                                                                    widget=self.jcpds_widget.eos_K_txt,
-                                                                    param='k0'))
-        self.jcpds_widget.eos_Kp_txt.editingFinished.connect(partial(self.param_txt_changed,
-                                                                     widget=self.jcpds_widget.eos_Kp_txt,
-                                                                     param='k0p0'))
-        self.jcpds_widget.eos_alphaT_txt.editingFinished.connect(partial(self.param_txt_changed,
-                                                                         widget=self.jcpds_widget.eos_alphaT_txt,
-                                                                         param='alpha_t0'))
-        self.jcpds_widget.eos_dalphadT_txt.editingFinished.connect(partial(self.param_txt_changed,
-                                                                           widget=self.jcpds_widget.eos_dalphadT_txt,
-                                                                           param='d_alpha_dt'))
-        self.jcpds_widget.eos_dKdT_txt.editingFinished.connect(partial(self.param_txt_changed,
-                                                                       widget=self.jcpds_widget.eos_dKdT_txt,
-                                                                       param='dk0dt'))
-        self.jcpds_widget.eos_dKpdT_txt.editingFinished.connect(partial(self.param_txt_changed,
-                                                                        widget=self.jcpds_widget.eos_dKpdT_txt,
-                                                                        param='dk0pdt'))
-
+        
         # Reflections Controls
         self.jcpds_widget.reflections_add_btn.clicked.connect(self.reflections_add_btn_click)
         self.jcpds_widget.reflections_delete_btn.clicked.connect(self.reflections_delete_btn_click)
@@ -161,6 +142,13 @@ class JcpdsEditorController(QtCore.QObject):
         #
         # # Closing and opening
         self.jcpds_widget.closeEvent = self.view_closed
+
+
+        # jcpds V5 EOS events
+        self.jcpds_widget.lattice_eos_z_txt.editingFinished.connect(self.z_edited)
+        self.jcpds_widget.eos_widget.eos_type_edited_signal.connect(self.eos_type_edited)
+        self.jcpds_widget.eos_widget.param_edited_signal.connect(self.eos_param_edited)
+
 
     def edit_btn_callback(self):
         selected_row = self.phase_widget.get_selected_phase_row()
@@ -352,3 +340,16 @@ class JcpdsEditorController(QtCore.QObject):
 
     def view_closed(self, _):
         self.close_view()
+
+    # jcpds 5 stuff
+
+    def z_edited(self):
+        z = float(str(self.jcpds_widget.lattice_eos_z_txt.text()))
+        self.phase_model.set_z(self.phase_ind, z)
+
+    def eos_param_edited(self, params):
+        self.phase_model.set_eos_params(self.phase_ind, params)
+
+    def eos_type_edited(self, params):
+        self.phase_model.set_eos_type(self.phase_ind, params)
+        
