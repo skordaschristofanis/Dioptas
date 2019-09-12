@@ -390,7 +390,12 @@ class JcpdsEditorWidget(QtWidgets.QWidget):
 
         self.lattice_eos_volume_txt.setText('{0:.4f}'.format(jcpds_phase.params['v']))
         # jcpds V5
-        self.lattice_eos_molar_volume_txt.setText('{0:.4e}'.format(jcpds_phase.params['vm']))
+        if 'vm' in jcpds_phase.params.keys():
+            vm = jcpds_phase.params['vm']
+            vm_txt = '{0:.4e}'.format(vm)
+        else:
+            vm_txt = ''
+        self.lattice_eos_molar_volume_txt.setText(vm_txt)
 
         try:
             if not self.lattice_ab_sb.hasFocus():
