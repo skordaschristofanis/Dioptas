@@ -24,6 +24,8 @@ import numpy as np
 from qtpy import QtCore
 
 import h5py
+import json
+
 
 from .util import jcpds
 from .util import Pattern
@@ -137,7 +139,10 @@ class DioptasModel(QtCore.QObject):
                     for ind, comment in enumerate(phase.params['comments']):
                         phases_comments_group.attrs[str(ind)] = comment
                 else:
-                    phase_parameter_group.attrs[key] = phase.params[key]
+                    param = phase.params[key]
+                    if key == 'eos':
+                        param = str(param)
+                    phase_parameter_group.attrs[key] = param
             phase_reflections_group = phase_group.create_group('reflections')
             for ind, reflection in enumerate(phase.reflections):
                 phase_reflection_group = phase_reflections_group.create_group(str(ind))
@@ -176,12 +181,21 @@ class DioptasModel(QtCore.QObject):
             new_jcpds.name = phase_group.attrs.get('name')
             new_jcpds.filename = phase_group.attrs.get('filename')
             for p_key, p_value in phase_group.get('params').attrs.items():
-                new_jcpds.params[p_key] = p_value
+                if p_key == 'eos':  # to accomodate jcpds V5 EOS loading 
+                    p_value = p_value.replace("'", '"')
+                    p_value = p_value.replace('nan','"nan"')
+                    p_value = json.loads(p_value, object_hook=dict)
+                    new_jcpds.set_EOS(p_value)
+                else:
+                    new_jcpds.params[p_key] = p_value
+                
             for c_key, comment in phase_group.get('comments').attrs.items():
                 new_jcpds.params['comments'].append(comment)
             for r_key, reflection in phase_group.get('reflections').items():
                 new_jcpds.add_reflection(reflection.attrs['h'], reflection.attrs['k'], reflection.attrs['l'],
                                          reflection.attrs['intensity'], reflection.attrs['d'])
+            
+            #new_jcpds.reload_eos()
             new_jcpds.params['modified'] = bool(phase_group.get('params').attrs['modified'])
             self.phase_model.phase_files.append(new_jcpds.filename)
             self.phase_model.add_jcpds_object(new_jcpds)

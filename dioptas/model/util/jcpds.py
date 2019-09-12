@@ -370,6 +370,7 @@ class jcpds(object):
         #             ': calculated D ', r.d, \
         #             ') differs by more than 0.1% from input D (', r.d0, ')'))
 
+
     def save_file(self, filename):
         """
         Writes a JCPDS object to a file.
@@ -863,7 +864,10 @@ class jcpds(object):
         
         eos = params['equation_of_state']
         if eos in self.EOS:
-            self.params['eos']= self.EOS[eos].params
+            current_params = self.params['eos']
+            new_params = self.EOS[eos].params
+            if current_params !=new_params:
+                self.params['eos'] = self.EOS[eos].params
             self.volume_calc = self.EOS[eos].volume
             self.pressure_calc = self.EOS[eos].pressure
         else:
@@ -896,6 +900,7 @@ class jcpds(object):
             self.params['eos']= self.EOS[eos].params
             self.volume_calc = self.EOS[eos].volume
             self.pressure_calc = self.EOS[eos].pressure
+        self.params['modified'] = False
         
     def set_eos_param(self, eos, key, param):
         if key == 'V_0':
@@ -914,6 +919,7 @@ class jcpds(object):
         for key in self.EOS:
             eos = self.EOS[key]
             eos.params['V_0'] = v0m
+        
 
     def set_param_to_jcpds4_field(self, key, param):
         
@@ -930,7 +936,7 @@ class jcpds(object):
             self.params['alpha_t0'] = param
         if 'd_alpha_dt' == key:
             self.params['d_alpha_dt'] = param
-        
+        self.params['modified'] = False
 
     def get_params_from_jcpds4_fields(self, params):
         if 'V_0' in params:
