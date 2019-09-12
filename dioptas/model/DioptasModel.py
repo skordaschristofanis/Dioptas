@@ -183,7 +183,7 @@ class DioptasModel(QtCore.QObject):
             for p_key, p_value in phase_group.get('params').attrs.items():
                 if p_key == 'eos':  # to accomodate jcpds V5 EOS loading 
                     p_value = p_value.replace("'", '"')
-                    p_value = p_value.replace('nan','"nan"')
+                    p_value = p_value.replace('nan','0')
                     p_value = json.loads(p_value, object_hook=dict)
                     new_jcpds.set_EOS(p_value)
                 else:
