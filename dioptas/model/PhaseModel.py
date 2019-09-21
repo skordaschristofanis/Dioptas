@@ -18,6 +18,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+""" 
+Modifications:
+    
+    October 11, 2019 Ross Hrubiak
+        - added jcpds V5 support: 
+        set_z, set_eos_type, and set_eos_params methods
+
+"""
+
 import numpy as np
 
 from qtpy import QtCore
@@ -344,3 +353,37 @@ class PhaseModel(QtCore.QObject):
         """
         for ind in range(len(self.phases)):
             self.del_phase(0)
+
+    # jcpds V5 stuff
+
+    def set_z(self, ind, z):
+        phase = self.phases[ind]
+        phase.set_z(z)
+        self.phases[ind].compute_v0()
+        self.phases[ind].compute_d0()
+        self.phases[ind].compute_d()
+        self.get_lines_d(ind)
+        self.phase_changed.emit(ind)
+
+    def set_eos_params(self, ind, params):
+        phase = self.phases[ind]
+        eos = phase.params['eos']
+        eos_type = eos['equation_of_state']
+        for key in params:
+            if key in eos:
+                phase.set_eos_param(eos_type, key, float(str(params[key])))
+        self.phases[ind].compute_v0()
+        self.phases[ind].compute_d0()
+        self.phases[ind].compute_d()
+        self.get_lines_d(ind)
+        self.phase_changed.emit(ind)
+
+
+    def set_eos_type(self, ind, params):
+        phase = self.phases[ind]
+        phase.set_EOS(params)
+        self.phases[ind].compute_v0()
+        self.phases[ind].compute_d0()
+        self.phases[ind].compute_d()
+        self.get_lines_d(ind)
+        self.phase_changed.emit(ind)

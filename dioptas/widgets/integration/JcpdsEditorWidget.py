@@ -26,6 +26,154 @@ from ...widgets.CustomWidgets import NumberTextField, LabelAlignRight, DoubleSpi
 
 from ...model.util.HelperModule import convert_d_to_two_theta
 
+from functools import partial
+from ...model.util.eos_definitions import equations_of_state
+
+class EosGroupbox(QtWidgets.QWidget):
+    param_edited_signal = QtCore.Signal(dict)
+    eos_type_edited_signal = QtCore.Signal(dict)
+    def __init__(self, equation_of_state='jcpds4'):
+        super().__init__()
+        self.equation_of_state = equation_of_state
+        self._layout = QtWidgets.QVBoxLayout()
+        self.eos_gb = QtWidgets.QGroupBox("Equation of State")
+        self._eos_gb_layout = QtWidgets.QVBoxLayout()
+        self.EOS_params = equations_of_state
+        self.EOS_widgets = {}
+        self.txt_fields = {}
+        self.scales = {}
+        self.eos_type_cb = CleanLooksComboBox()
+        self.eos_info = ''
+        self.eos_types = list(self.EOS_params.keys())
+        self.eos_type_cb.addItems(self.eos_types)
+        self._eos_type_cb_layout = QtWidgets.QHBoxLayout()
+        self._eos_type_cb_layout.addWidget(QtWidgets.QLabel('Form:'))
+        self._eos_type_cb_layout.addWidget(self.eos_type_cb)
+        self._eos_type_info_btn = QtWidgets.QPushButton('i')
+        self._eos_type_cb_layout.addWidget(self._eos_type_info_btn)
+        self._eos_type_info_btn.clicked.connect(self.show_eos_info)
+        self._eos_gb_layout.addLayout(self._eos_type_cb_layout)
+
+        for key in self.EOS_params:
+            eos = self.EOS_params[key]['params']
+            eos_widget = QtWidgets.QWidget()
+            _eos_layout = QtWidgets.QGridLayout()
+            row = 0
+            txt_fields = {}
+            for param_key in eos:
+                if param_key == 'V_0':
+                    continue
+                param = eos[param_key]
+                symbol = param['symbol']
+                desc = param['desc']
+                unit = param['unit']
+                if unit == "Pa":
+                    unit = "GPa"
+                    self.scales[param_key]=1e9
+                text_field =  NumberTextField()
+                text_field.setText('0')
+                txt_fields[param_key]=text_field
+                self.add_field(_eos_layout, text_field, symbol+':', unit, row, 0)
+                text_field.returnPressed.connect(partial(
+                        self.text_field_edited_callback, 
+                        {'eos':key,'param_key':param_key}))
+                row = row + 1
+            self.txt_fields[key]=txt_fields
+            eos_widget.setLayout(_eos_layout)    
+            self.EOS_widgets[key] = eos_widget
+            eos_widget.setStyleSheet("""
+                    NumberTextField {
+                        min-width: 60;
+                    }
+                """)
+        self.eos_widget = self.EOS_widgets[self.equation_of_state]
+        self._eos_gb_layout.addWidget(self.eos_widget)
+        self.eos_type_cb.setCurrentText(self.equation_of_state)
+        self.eos_gb.setLayout(self._eos_gb_layout)
+        self._layout.addWidget(self.eos_gb)
+        self.setLayout(self._layout)
+        self.eos_type_cb.currentTextChanged.connect(self.eos_type_edited)
+    
+    def show_eos_info(self):
+        QtWidgets.QMessageBox.about(None, "EOS formulation", self.get_current_eos_info() )
+
+    def get_current_eos_info(self):
+        selected_eos = self.eos_type_cb.currentText()
+        eos_name = 'EOS: ' +self.EOS_params[selected_eos]['name']
+        ref = self.EOS_params[selected_eos]['reference']
+        eos = self.EOS_params[selected_eos]['params']
+        desc = eos_name + '<br><br>'
+        for key in eos:
+            param = eos[key]
+            s = param['symbol'] + ': ' + param['desc'] + '<br>'
+            desc = desc + s
+        if ref != '':
+            desc = desc +'<br>Reference:<br>' +ref 
+        return desc
+
+    def eos_type_edited(self, key):
+        
+        if key in self.EOS_widgets:
+            self._change_eos_layout(key)
+            if key in self.txt_fields:
+                '''_txt_fields = self.txt_fields[key]
+                d = self.dictionarize_fields(_txt_fields)
+                '''
+                d = {}
+                d['equation_of_state']= key
+                self.eos_type_edited_signal.emit(d)
+
+    def _change_eos_layout(self, key):
+        _widget = self.EOS_widgets[key]
+        self._eos_gb_layout.removeWidget(self.eos_widget)
+        self.eos_widget.setParent(None)
+        self.eos_widget = _widget
+        self._eos_gb_layout.addWidget(self.eos_widget)
+            
+    def dictionarize_fields(self, fields):
+        d = {}
+        for key in fields:
+            field = fields[key]
+            val = float(str(field.text()))
+            if key in self.scales:
+                val = float(str(val)) * self.scales[key]     
+            d[key]= val
+        return d
+
+    def text_field_edited_callback(self, eos_param_key):
+        key = eos_param_key['param_key']
+        eos = eos_param_key['eos']
+        self.equation_of_state = eos
+        val = self.txt_fields[self.equation_of_state][key].text()
+        if key in self.scales:
+            val = float(str(val)) * self.scales[key]
+        self.param_edited_signal.emit({key:val})
+
+
+    def add_field(self, layout, widget, label_str, unit, x, y):
+        layout.addWidget(LabelAlignRight(label_str), x, y)
+        layout.addWidget(widget, x, y + 1)
+        if unit:
+            layout.addWidget(QtWidgets.QLabel(unit), x, y + 2)
+
+    def setEOSparams(self, params):
+        self.blockSignals(True)
+        eos = params['equation_of_state']
+        if self.equation_of_state != eos:
+            if eos in self.EOS_widgets:
+                self.eos_type_cb.setCurrentText(eos)
+                self._change_eos_layout(eos)
+            self.equation_of_state = eos
+
+        fields = self.txt_fields[self.equation_of_state]
+        for key in params:
+            param = params[key]
+            if key in fields:
+                param = params[key]
+                if key in self.scales:
+                    param = param / self.scales[key]
+                fields[key].setText(str(param))
+        self.blockSignals(False)
 
 class JcpdsEditorWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -103,12 +251,6 @@ class JcpdsEditorWidget(QtWidgets.QWidget):
         self.add_field(self._parameters_layout, self.lattice_gamma_sb, u'γ:', u"°", 2, 6)
         self.add_field(self._parameters_layout, self.lattice_angle_step_txt, u'st:', u"°", 2, 9)
 
-        self.lattice_volume_txt = NumberTextField()
-        self.lattice_eos_volume_txt = NumberTextField()
-
-        self.add_field(self._parameters_layout, self.lattice_volume_txt, 'V0:', u'Å³', 3, 3)
-        self.add_field(self._parameters_layout, self.lattice_eos_volume_txt, 'V:', u'Å³', 3, 6)
-
         self.lattice_ab_sb = DoubleSpinBoxAlignRight()
         self.lattice_ab_sb.setDecimals(4)
         self.lattice_ca_sb = DoubleSpinBoxAlignRight()
@@ -117,31 +259,27 @@ class JcpdsEditorWidget(QtWidgets.QWidget):
         self.lattice_cb_sb.setDecimals(4)
         self.lattice_ratio_step_txt = NumberTextField('0.01')
 
-        self.add_field(self._parameters_layout, self.lattice_ab_sb, 'a/b:', None, 4, 0)
-        self.add_field(self._parameters_layout, self.lattice_ca_sb, 'c/a:', None, 4, 3)
-        self.add_field(self._parameters_layout, self.lattice_cb_sb, 'c/b:', None, 4, 6)
-        self.add_field(self._parameters_layout, self.lattice_ratio_step_txt, 'st:', None, 4, 9)
+        self.add_field(self._parameters_layout, self.lattice_ab_sb, 'a/b:', None, 3, 0)
+        self.add_field(self._parameters_layout, self.lattice_ca_sb, 'c/a:', None, 3, 3)
+        self.add_field(self._parameters_layout, self.lattice_cb_sb, 'c/b:', None, 3, 6)
+        self.add_field(self._parameters_layout, self.lattice_ratio_step_txt, 'st:', None, 3, 9)
+
+        self.lattice_volume_txt = NumberTextField()
+        self.lattice_eos_volume_txt = NumberTextField()
+        self.lattice_eos_molar_volume_txt = NumberTextField()
+        self.lattice_eos_z_txt = NumberTextField()
+
+        self.add_field(self._parameters_layout, self.lattice_volume_txt, 'V<sub>0</sub>:', u'Å³', 4, 0)
+        self.add_field(self._parameters_layout, self.lattice_eos_volume_txt, 'V:', u'Å³', 4, 3)
+
+        self.add_field(self._parameters_layout, self.lattice_eos_molar_volume_txt, 'V<sub>m</sub>:', u'm³/mol', 5, 3)
+        self.add_field(self._parameters_layout, self.lattice_eos_z_txt, 'Z:', u'', 5, 0)
+        
 
         self._lattice_parameters_layout.addLayout(self._parameters_layout)
         self.lattice_parameters_gb.setLayout(self._lattice_parameters_layout)
 
-        self.eos_gb = QtWidgets.QGroupBox('Equation of State')
-        self._eos_layout = QtWidgets.QGridLayout()
-
-        self.eos_K_txt = NumberTextField()
-        self.eos_Kp_txt = NumberTextField()
-        self.eos_alphaT_txt = NumberTextField()
-        self.eos_dalphadT_txt = NumberTextField()
-        self.eos_dKdT_txt = NumberTextField()
-        self.eos_dKpdT_txt = NumberTextField()
-
-        self.add_field(self._eos_layout, self.eos_K_txt, 'K:', 'GPa', 0, 0)
-        self.add_field(self._eos_layout, self.eos_Kp_txt, 'Kp:', None, 1, 0)
-        self.add_field(self._eos_layout, self.eos_alphaT_txt, u'α<sub>T</sub>:', '1/K', 2, 0)
-        self.add_field(self._eos_layout, self.eos_dalphadT_txt, u'dα<sub>T</sub>/dT:', u'1/K²', 3, 0)
-        self.add_field(self._eos_layout, self.eos_dKdT_txt, 'dK/dT:', 'GPa/K', 4, 0)
-        self.add_field(self._eos_layout, self.eos_dKpdT_txt, "dK'/dT", '1/K', 5, 0)
-        self.eos_gb.setLayout(self._eos_layout)
+        self.eos_widget = EosGroupbox()
 
         self.reflections_gb = QtWidgets.QGroupBox('Reflections')
         self._reflection_layout = QtWidgets.QGridLayout()
@@ -161,7 +299,7 @@ class JcpdsEditorWidget(QtWidgets.QWidget):
         self.reflections_gb.setLayout(self._reflection_layout)
 
         self._body_layout = QtWidgets.QGridLayout()
-        self._body_layout.addWidget(self.eos_gb, 0, 0)
+        self._body_layout.addWidget(self.eos_widget, 0, 0)
         self._body_layout.addItem(VerticalSpacerItem(), 1, 0)
         self._body_layout.addWidget(self.reflections_gb, 0, 1, 2, 1)
 
@@ -190,8 +328,8 @@ class JcpdsEditorWidget(QtWidgets.QWidget):
         self.reflection_table_view.setItemDelegate(TextDoubleDelegate())
         self.reflection_table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-        self.eos_gb.setMaximumWidth(200)
-        self.eos_gb.setStyleSheet("""
+        self.eos_widget.setMaximumWidth(250)
+        self.eos_widget.setStyleSheet("""
             QLineEdit {
                 max-width: 80;
             }
@@ -201,7 +339,9 @@ class JcpdsEditorWidget(QtWidgets.QWidget):
         self.reflection_table_view.verticalHeader().setResizeMode(QtWidgets.QHeaderView.Fixed)
 
         self.setWindowFlags(QtCore.Qt.Tool)
-        self.setAttribute(QtCore.Qt.WA_MacAlwaysShowToolWindow)
+
+        # buggy in macosx Mojave, don't use
+        #self.setAttribute(QtCore.Qt.WA_MacAlwaysShowToolWindow)
 
     def raise_widget(self):
         self.show()
@@ -222,13 +362,11 @@ class JcpdsEditorWidget(QtWidgets.QWidget):
         self.reflection_table_model.update_reflection_data(jcpds_phase.reflections,
                                                            wavelength)
 
+    # jcpds V5
     def update_eos_parameters(self, jcpds_phase):
-        self.eos_K_txt.setText(str(jcpds_phase.params['k0']))
-        self.eos_Kp_txt.setText(str(jcpds_phase.params['k0p']))
-        self.eos_alphaT_txt.setText(str(jcpds_phase.params['alpha_t0']))
-        self.eos_dalphadT_txt.setText(str(jcpds_phase.params['d_alpha_dt']))
-        self.eos_dKdT_txt.setText(str(jcpds_phase.params['dk0dt']))
-        self.eos_dKpdT_txt.setText(str(jcpds_phase.params['dk0pdt']))
+        if 'eos' in jcpds_phase.params and 'z' in jcpds_phase.params:
+            self.eos_widget.setEOSparams(jcpds_phase.params['eos'])
+            self.lattice_eos_z_txt.setText(str(jcpds_phase.params['z']))
 
     def update_name(self, jcpds_phase):
         self.filename_txt.setText(jcpds_phase.filename)
@@ -251,6 +389,13 @@ class JcpdsEditorWidget(QtWidgets.QWidget):
         self.lattice_eos_c_txt.setText('{0:.4f}'.format(jcpds_phase.params['c']))
 
         self.lattice_eos_volume_txt.setText('{0:.4f}'.format(jcpds_phase.params['v']))
+        # jcpds V5
+        if 'vm' in jcpds_phase.params.keys():
+            vm = jcpds_phase.params['vm']
+            vm_txt = '{0:.4e}'.format(vm)
+        else:
+            vm_txt = ''
+        self.lattice_eos_molar_volume_txt.setText(vm_txt)
 
         try:
             if not self.lattice_ab_sb.hasFocus():

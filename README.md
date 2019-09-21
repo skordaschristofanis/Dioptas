@@ -1,3 +1,29 @@
+This is a branch for jcpds5 development
+----------
+
+The main new feature of the jcpds5 format is that it allows to describe the PVT EOS using different formulations, either existing or user defined. The new jcpds5 format is backward compatible and should work with legacy software that can work with jcpds4.
+
+The new version of the commonly used jcpds file format, called here V5, includes two new tags: 'Z' and 'EOS'. Z is the nubmber of formula units per unit cell. 'Z' tag is needed by many equation of state formulations that are based on molar volume rather than unit cell volume. 'EOS' tag includes a dict string that bundles multiple parameters that descrive a particular equation of state. Here we use the same formulation for the EOS dict string as the "Burnman" package (https://github.com/geodynamics/burnman). For details about the EOS dict string, please refer to the "Burnman" package documentation. An equations of state file (eos_definitions.py) provides descriptions for different equations of state that are supported. This file is also used by the widget constructor to create a eos widget with appropriate fields. The eos_definitions.py can be modified to include any number of new formulations. When adding a new equation of state, that is not included in the Burnman package, we have to create a new class that overrides the general EquationOfState class in Burnman, add a new description in eos_definitions.py and add a hook for the constructor of the new EOS class to jcpds.py. 
+
+The new version of the JcpdsEditorWidget now shows a drop-down box that allows the user to choose which EOS form to use.
+
+Overall, several existing Dioptas modules have been modified to make them compatible with the new EOS calculation approach:<br>
+model/util/: PhaseModel.py, jcpds.py <br>
+model/: DioptasModel.py<br>
+controller/integration/phase/: JcpdsEditorController.py<br>
+widtegs/integration/: JcpdsEditorWidget.py<br>
+
+And, some new items have been added:<br>
+burnman package: burnman folder currently copied to the same location as dioptas folder<br>
+model/util/: birch_murnaghan_thermal.py, eos_definitions.py<br>
+
+Some examples of the jcpds files are provided for testing purposes:
+Dioptas/dioptas/tests/data/jcpds/: mgo_V5_(eos_slb2).jcpds, au_Anderson_V5_(eos_jcpds4).jcpds
+
+Things that are currently not fully working:
+  - the "Should Dioptas recover your previous work?" feature is not properly loading the new jcpds files. It seems the jcpds files are loaded by for some reason are not displaying in the plot. However, loading a saved project that contains jcpds files with a new format seems to work fine. (I modified the load method in DioptasModel.py)
+
+
 Dioptas
 ======
 
