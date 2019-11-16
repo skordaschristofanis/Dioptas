@@ -160,8 +160,6 @@ class ImageController(object):
         self.widget.mask_transparent_cb.clicked.connect(self.update_mask_transparency)
         self.widget.map_2D_btn.clicked.connect(self.map_2d)  # MAP2D
 
-        self.widget.img_browse_by_name_rb.clicked.connect(self.set_iteration_mode_number)
-        self.widget.img_browse_by_time_rb.clicked.connect(self.set_iteration_mode_time)
         self.widget.mask_transparent_cb.clicked.connect(self.update_mask_transparency)
 
         ###
