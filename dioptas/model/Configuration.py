@@ -30,7 +30,7 @@ from .util.ImgCorrection import CbnCorrection, ObliqueAngleDetectorAbsorptionCor
 
 from .util import Pattern
 from .util.calc import convert_units
-from . import ImgModel, CalibrationModel, MaskModel, PatternModel
+from . import ImgModel, CalibrationModel, MaskModel, PatternModel, BatchModel
 
 
 class Configuration(QtCore.QObject):
@@ -47,6 +47,7 @@ class Configuration(QtCore.QObject):
         self.img_model = ImgModel()
         self.mask_model = MaskModel()
         self.calibration_model = CalibrationModel(self.img_model)
+        self.batch_model = BatchModel(self.calibration_model, self.mask_model)
         self.pattern_model = PatternModel()
 
         if working_directories is None:
@@ -61,7 +62,6 @@ class Configuration(QtCore.QObject):
 
         self._integration_rad_points = None
         self._integration_unit = '2th_deg'
-        self._oned_azimuth_range = None
 
         self._cake_azimuth_points = 360
         self._cake_azimuth_range = None
@@ -96,7 +96,7 @@ class Configuration(QtCore.QObject):
             else:
                 mask = None
 
-            x, y = self.calibration_model.integrate_1d(azi_range=self.oned_azimuth_range, mask=mask, unit=self.integration_unit,
+            x, y = self.calibration_model.integrate_1d(mask=mask, unit=self.integration_unit,
                                                        num_points=self.integration_rad_points)
 
             self.pattern_model.set_pattern(x, y, self.img_model.filename, unit=self.integration_unit)  #
@@ -243,16 +243,6 @@ class Configuration(QtCore.QObject):
         self._cake_azimuth_range = new_value
         if self.auto_integrate_cake:
             self.integrate_image_2d()
-
-    @property
-    def oned_azimuth_range(self):
-        return self._oned_azimuth_range
-
-    @oned_azimuth_range.setter
-    def oned_azimuth_range(self, new_value):
-        self._oned_azimuth_range = new_value
-        if self.auto_integrate_pattern:
-            self.integrate_image_1d()
 
     @property
     def integration_unit(self):
@@ -425,11 +415,14 @@ class Configuration(QtCore.QObject):
         image_group.attrs['background_offset'] = self.img_model.background_offset
         image_group.attrs['background_scaling'] = self.img_model.background_scaling
         if self.img_model.has_background():
-            background_data = self.img_model.untransformed_background_data
+            background_data = self.img_model.background_data
+            # remove image transformations
+            for transformation in reversed(self.img_model.img_transformations):
+                background_data = transformation(background_data)
             image_group.create_dataset('background_data', background_data.shape, 'f', background_data)
 
-        image_group.attrs['series_max'] = self.img_model.series_max
-        image_group.attrs['series_pos'] = self.img_model.series_pos
+            image_group.attrs['series_max'] = self.img_model.series_max
+            image_group.attrs['series_pos'] = self.img_model.series_pos
 
         # image corrections
         corrections_group = image_group.create_group('corrections')
@@ -452,7 +445,10 @@ class Configuration(QtCore.QObject):
 
         # the actual image
         image_group.attrs['filename'] = self.img_model.filename
-        current_raw_image = self.img_model.untransformed_raw_img_data
+        current_raw_image = np.copy(self.img_model.raw_img_data)
+        # remove image transformations
+        for transformation in reversed(self.img_model.img_transformations):
+            current_raw_image = transformation(current_raw_image)
 
         raw_image_data = image_group.create_dataset('raw_image_data', current_raw_image.shape, dtype='f')
         raw_image_data[...] = current_raw_image

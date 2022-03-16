@@ -30,6 +30,7 @@ from ...widgets.UtilityWidgets import open_file_dialog, open_files_dialog, save_
 # imports for type hinting in PyCharm -- DO NOT DELETE
 from ...widgets.integration import IntegrationWidget
 from ...model.DioptasModel import DioptasModel
+from ...model.util.Pattern import Pattern
 from ...model.util.HelperModule import get_partial_index, get_partial_value
 
 from .EpicsController import EpicsController
@@ -71,7 +72,7 @@ class ImageController(object):
         self.create_mouse_behavior()
 
     def initialize(self):
-        self.update_img()
+        self.update_img_info()
         self.plot_img()
         self.plot_mask()
         self.widget.img_widget.auto_level()
@@ -106,9 +107,35 @@ class ImageController(object):
 
         shift_amount = self.widget.cake_shift_azimuth_sl.value()
         self.widget.cake_widget.plot_image(np.roll(self.model.cake_data, shift_amount, axis=0))
+        self.plot_cake_integral()
         self.update_cake_axes_range()
         if auto_scale:
             self.widget.cake_widget.auto_level()
+
+    def plot_cake_integral(self, tth=None):
+        if not self.widget.cake_widget.cake_integral_plot.isVisible() or self.clicked_tth is None:
+            return
+
+        if tth is None:
+            tth = self.clicked_tth
+
+        x, y = self.model.calibration_model.cake_integral(
+            tth,
+            self.widget.integration_control_widget.integration_options_widget.cake_integral_width_sb.value()
+        )
+        shift_amount = self.widget.cake_shift_azimuth_sl.value()
+        self.widget.cake_widget.plot_cake_integral(x, np.roll(y, shift_amount))
+
+    def save_cake_integral(self):
+        img_filename, _ = os.path.splitext(os.path.basename(self.model.img_model.filename))
+        filename = save_file_dialog(
+            self.widget, "Save Cake Integral Data.",
+            os.path.join(self.model.working_directories['pattern'],
+                         img_filename + '.xy'))
+
+        if filename != '':
+            integral_pattern = Pattern(*self.widget.cake_widget.cake_integral_item.getData())
+            integral_pattern.save(filename)
 
     def plot_mask(self):
         """
@@ -134,7 +161,7 @@ class ImageController(object):
 
     def create_signals(self):
         self.model.configuration_selected.connect(self.update_gui_from_configuration)
-        self.model.img_changed.connect(self.update_img)
+        self.model.img_changed.connect(self.update_img_info)
 
         self.model.img_changed.connect(self.plot_img)
         self.model.img_changed.connect(self.plot_mask)
@@ -142,24 +169,25 @@ class ImageController(object):
         """
         Creates all the connections of the GUI elements.
         """
-        self.widget.img_step_file_widget.next_btn.clicked.connect(self.load_next_img)
-        self.widget.img_step_file_widget.previous_btn.clicked.connect(self.load_previous_img)
+
+        ###
+        # File Connections and browsing
+        self.widget.next_img_btn.clicked.connect(self.load_next_img)
+        self.widget.prev_img_btn.clicked.connect(self.load_previous_img)
         self.widget.load_img_btn.clicked.connect(self.load_file)
         self.widget.img_filename_txt.editingFinished.connect(self.filename_txt_changed)
         self.widget.img_directory_txt.editingFinished.connect(self.directory_txt_changed)
         self.widget.img_directory_btn.clicked.connect(self.img_directory_btn_click)
 
-        self.widget.img_step_series_widget.next_btn.clicked.connect(self.load_next_series_img)
-        self.widget.img_step_series_widget.previous_btn.clicked.connect(self.load_prev_series_img)
-        self.widget.img_step_series_widget.pos_txt.editingFinished.connect(self.load_series_img)
-
         self.widget.file_info_btn.clicked.connect(self.show_file_info)
 
-        self.widget.img_step_file_widget.browse_by_name_rb.clicked.connect(self.set_iteration_mode_number)
-        self.widget.img_step_file_widget.browse_by_time_rb.clicked.connect(self.set_iteration_mode_time)
+        self.widget.img_browse_by_name_rb.clicked.connect(self.set_iteration_mode_number)
+        self.widget.img_browse_by_time_rb.clicked.connect(self.set_iteration_mode_time)
         self.widget.mask_transparent_cb.clicked.connect(self.update_mask_transparency)
         self.widget.map_2D_btn.clicked.connect(self.map_2d)  # MAP2D
 
+        self.widget.img_browse_by_name_rb.clicked.connect(self.set_iteration_mode_number)
+        self.widget.img_browse_by_time_rb.clicked.connect(self.set_iteration_mode_time)
         self.widget.mask_transparent_cb.clicked.connect(self.update_mask_transparency)
 
         ###
@@ -173,9 +201,14 @@ class ImageController(object):
         self.widget.cake_shift_azimuth_sl.valueChanged.connect(partial(self.plot_cake, None))
         self.widget.cake_shift_azimuth_sl.valueChanged.connect(self._update_cake_mouse_click_pos)
         self.widget.cake_shift_azimuth_sl.valueChanged.connect(self.update_cake_azimuth_axis)
+        self.widget.cake_shift_azimuth_sl.valueChanged.connect(partial(self.plot_cake_integral, None))
         self.widget.integration_image_widget.img_view.img_view_box.sigRangeChanged.connect(self.update_cake_axes_range)
         self.widget.pattern_q_btn.clicked.connect(partial(self.set_cake_axis_unit, 'q_A^-1'))
         self.widget.pattern_tth_btn.clicked.connect(partial(self.set_cake_axis_unit, '2th_deg'))
+        self.widget.integration_control_widget.integration_options_widget.cake_integral_width_sb.valueChanged. \
+            connect(partial(self.plot_cake_integral, None))
+        self.widget.integration_control_widget.integration_options_widget.cake_save_integral_btn.clicked. \
+            connect(self.save_cake_integral)
 
         ###
         # General Image Widget controls
@@ -202,6 +235,8 @@ class ImageController(object):
         self.widget.img_widget.mouse_moved.connect(self.show_img_mouse_position)
         self.widget.cake_widget.mouse_left_clicked.connect(self.img_mouse_click)
         self.widget.cake_widget.mouse_moved.connect(self.show_img_mouse_position)
+
+        self.widget.pattern_widget.mouse_left_clicked.connect(self.pattern_mouse_click)
 
     def load_file(self, *args, **kwargs):
         filename = kwargs.get('filename', None)
@@ -449,19 +484,19 @@ class ImageController(object):
     def load_prev_series_img(self):
         step = int(str(self.widget.img_step_series_widget.step_txt.text()))
         pos = int(str(self.widget.img_step_series_widget.pos_txt.text()))
-        self.model.img_model.load_series_img(pos-step)
+        self.model.img_model.load_series_img(pos - step)
 
     def load_next_series_img(self):
         step = int(str(self.widget.img_step_series_widget.step_txt.text()))
         pos = int(str(self.widget.img_step_series_widget.pos_txt.text()))
-        self.model.img_model.load_series_img(pos+step)
+        self.model.img_model.load_series_img(pos + step)
 
     def load_next_img(self):
-        step = int(str(self.widget.img_step_file_widget.step_txt.text()))
+        step = int(str(self.widget.image_browse_step_txt.text()))
         self.model.img_model.load_next_file(step=step)
 
     def load_previous_img(self):
-        step = int(str(self.widget.img_step_file_widget.step_txt.text()))
+        step = int(str(self.widget.image_browse_step_txt.text()))
         self.model.img_model.load_previous_file(step=step)
 
     def filename_txt_changed(self):
@@ -498,14 +533,7 @@ class ImageController(object):
             self.model.working_directories['image'] = directory
             self.widget.img_directory_txt.setText(directory)
 
-    def update_img(self):
-        self.widget.img_step_series_widget.setVisible(self.model.img_model.series_max > 1)
-        self.widget.img_step_series_widget.pos_validator.setTop(self.model.img_model.series_max)
-        self.widget.img_step_series_widget.pos_txt.setText(str(self.model.img_model.series_pos))
-
-        self.widget.file_info_btn.setVisible(self.model.img_model.file_info != "")
-        self.widget.move_btn.setVisible(len(self.model.img_model.motors_info) > 0)
-
+    def update_img_info(self):
         self.widget.img_filename_txt.setText(os.path.basename(self.model.img_model.filename))
         self.widget.img_directory_txt.setText(os.path.dirname(self.model.img_model.filename))
         self.widget.file_info_widget.text_lbl.setText(self.model.img_model.file_info)
@@ -636,33 +664,27 @@ class ImageController(object):
 
     def _update_cake_line_pos(self):
         cur_tth = self.get_current_pattern_tth()
-        if cur_tth < np.min(self.model.cake_tth) or cur_tth > np.max(self.model.cake_tth):
-            self.widget.cake_widget.vertical_line.hide()
+        if self.model.cake_tth is None or cur_tth < np.min(self.model.cake_tth) or cur_tth > np.max(
+                self.model.cake_tth):
+            self.widget.cake_widget.deactivate_vertical_line()
         else:
             new_pos = get_partial_index(self.model.cake_tth, cur_tth) + 0.5
-            self.widget.cake_widget.vertical_line.setValue(new_pos)
-            self.widget.cake_widget.vertical_line.show()
+            self.widget.cake_widget.set_vertical_line_pos(new_pos, 0)
+            self.widget.cake_widget.activate_vertical_line()
 
     def _update_cake_mouse_click_pos(self):
         if self.clicked_tth is None or not self.model.calibration_model.is_calibrated:
             return
 
-        tth = self.clicked_tth / np.pi * 180
+        tth = self.clicked_tth
         azi = self.clicked_azi
 
         cake_tth = self.model.cake_tth
-        cake_azi = self.model.cake_azi
 
-        if tth < np.min(cake_tth) or tth > np.max(cake_tth):
-            self.widget.cake_widget.mouse_click_item.hide()
-        elif azi < np.min(cake_azi) or tth > np.max(cake_azi):
-            self.widget.cake_widget.mouse_click_item.hide()
-        else:
-            self.widget.cake_widget.mouse_click_item.show()
-            x_pos = get_partial_index(cake_tth, tth) + 0.5
-            shift_amount = self.widget.cake_shift_azimuth_sl.value()
-            y_pos = (get_partial_index(self.model.cake_azi, azi) + 0.5 + shift_amount) % len(self.model.cake_azi)
-            self.widget.cake_widget.set_mouse_click_position(x_pos, y_pos)
+        x_pos = get_partial_index(cake_tth, tth) + 0.5
+        shift_amount = self.widget.cake_shift_azimuth_sl.value()
+        y_pos = (get_partial_index(self.model.cake_azi, azi) + 0.5 + shift_amount) % len(self.model.cake_azi)
+        self.widget.cake_widget.set_mouse_click_position(x_pos, y_pos)
 
     def _update_image_line_pos(self):
         if not self.model.calibration_model.is_calibrated:
@@ -723,6 +745,8 @@ class ImageController(object):
 
         data_img_item = self.widget.integration_image_widget.cake_view.data_img_item
         cake_tth = self.model.cake_tth
+        if data_img_item.boundingRect().width() == 0:
+            return
 
         width = data_img_item.viewRect().width()
         left = data_img_item.viewRect().left()
@@ -807,14 +831,17 @@ class ImageController(object):
         if self.model.calibration_model.is_calibrated:
             x, y = y, x  # the indices are reversed for the img_array
             if self.widget.img_mode == 'Cake':  # cake mode
+                # get clicked tth and azimuth
                 cake_shape = self.model.cake_data.shape
                 if x < 0 or y < 0 or x > cake_shape[0] - 1 or y > cake_shape[1] - 1:
                     return
                 x = np.array([x])
                 y = np.array([y])
-                tth = get_partial_value(self.model.cake_tth, y - 0.5) / 180 * np.pi
+                tth = get_partial_value(self.model.cake_tth, y - 0.5)
                 shift_amount = self.widget.cake_shift_azimuth_sl.value()
                 azi = get_partial_value(np.roll(self.model.cake_azi, shift_amount), x - 0.5)
+                self.widget.cake_widget.activate_vertical_line()
+
             elif self.widget.img_mode == 'Image':  # image mode
                 img_shape = self.model.img_data.shape
                 if x < 0 or y < 0 or x > img_shape[0] - 1 or y > img_shape[1] - 1:
@@ -832,18 +859,19 @@ class ImageController(object):
             self.clicked_tth = tth
             self.clicked_azi = azi
 
+            if self.widget.img_mode == 'Cake':
+                self.plot_cake_integral()
+
             # calculate right unit for the position line the pattern widget
             if self.widget.pattern_q_btn.isChecked():
-                pos = 4 * np.pi * \
-                      np.sin(tth / 2) / \
-                      self.model.calibration_model.wavelength / 1e10
+                pos = 4 * np.pi * np.sin(np.deg2rad(tth) / 2) / self.model.calibration_model.wavelength / 1e10
             elif self.widget.pattern_tth_btn.isChecked():
-                pos = tth / np.pi * 180
+                pos = tth
             elif self.widget.pattern_d_btn.isChecked():
-                pos = self.model.calibration_model.wavelength / \
-                      (2 * np.sin(tth / 2)) * 1e10
+                pos = self.model.calibration_model.wavelength / (2 * np.sin(np.deg2rad(tth) / 2)) * 1e10
             else:
                 pos = 0
+
             self.widget.pattern_widget.set_pos_line(pos)
         self.widget.click_tth_lbl.setText(self.widget.mouse_tth_lbl.text())
         self.widget.click_d_lbl.setText(self.widget.mouse_d_lbl.text())
@@ -872,6 +900,43 @@ class ImageController(object):
         self.widget.click_x_lbl.setText(self.widget.mouse_x_lbl.text())
         self.widget.click_y_lbl.setText(self.widget.mouse_y_lbl.text())
         self.widget.click_int_lbl.setText(self.widget.mouse_int_lbl.text())
+
+    def pattern_mouse_click(self, x, y):
+        if self.model.calibration_model.is_calibrated:
+            if self.widget.img_mode == 'Cake':
+                self.set_cake_line_position(x)
+            elif self.widget.img_mode == 'Image':
+                self.set_image_line_position(x)
+
+    def set_cake_line_position(self, x):
+        x = self._convert_to_tth(x)
+
+        upper_ind = np.where(self.model.cake_tth > x)[0]
+        lower_ind = np.where(self.model.cake_tth < x)[0]
+
+        if len(upper_ind) == 0 or len(lower_ind) == 0:
+            self.widget.cake_widget.plot_cake_integral(np.array([]), np.array([]))
+            self.widget.cake_widget.deactivate_vertical_line()
+            return
+
+        spacing = self.model.cake_tth[upper_ind[0]] - self.model.cake_tth[lower_ind[-1]]
+        new_pos = lower_ind[-1] + (x - self.model.cake_tth[lower_ind[-1]]) / spacing + 0.5
+        self.widget.cake_widget.vertical_line.setValue(new_pos)
+        self.widget.cake_widget.activate_vertical_line()
+        self.plot_cake_integral(x)
+
+    def set_image_line_position(self, x):
+        x = self._convert_to_tth(x)
+
+        self.widget.img_widget.set_circle_line(
+            self.model.calibration_model.get_two_theta_array(), np.deg2rad(x))
+
+    def _convert_to_tth(self, x):
+        if self.model.integration_unit == 'q_A^-1':
+            return self.convert_x_value(x, 'q_A^-1', '2th_deg')
+        elif self.model.integration_unit == 'd_A':
+            return self.convert_x_value(x, 'd_A', '2th_deg')
+        return x
 
     def set_iteration_mode_number(self):
         self.model.img_model.set_file_iteration_mode('number')
@@ -934,7 +999,7 @@ class ImageController(object):
                                                      img_filename + '.png'),
                                         ('Image (*.png);;Data (*.tiff);;Text (*.txt)'))
 
-        if filename is not '':
+        if filename != '':
             if filename.endswith('.png'):
                 if self.widget.img_mode == 'Cake':
                     self.widget.cake_widget.deactivate_vertical_line()
@@ -978,7 +1043,6 @@ class ImageController(object):
         self.widget.autoprocess_cb.setChecked(self.model.img_model.autoprocess)
         self.widget.calibration_lbl.setText(self.model.calibration_model.calibration_name)
 
-        self.update_img()
         self.update_mask_mode()
         self.update_roi_in_gui()
 

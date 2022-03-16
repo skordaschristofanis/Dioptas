@@ -24,6 +24,7 @@ from qtpy import QtWidgets, QtCore
 
 from ..UtilityWidgets import FileInfoWidget
 from ..EpicsWidgets import MoveStageWidget
+from .BatchWidgets import BatchWidget
 from ..MapWidgets import Map2DWidget  # MAP2D
 from ..CustomWidgets import NoRectDelegate, FlatButton
 
@@ -86,6 +87,7 @@ class IntegrationWidget(QtWidgets.QWidget):
 
         self.file_info_widget = FileInfoWidget(self)
         self.move_widget = MoveStageWidget(self)
+        self.batch_widget = BatchWidget(self)
         self.map_2D_widget = Map2DWidget(self)  # MAP2D
 
         self.img_frame_size = QtCore.QSize(400, 500)
@@ -97,8 +99,11 @@ class IntegrationWidget(QtWidgets.QWidget):
         img_file_widget = self.integration_control_widget.img_control_widget.file_widget
         self.load_img_btn = img_file_widget.load_btn
         self.autoprocess_cb = img_file_widget.file_cb
-        self.img_step_file_widget = img_file_widget.step_file_widget
-        self.img_step_series_widget = img_file_widget.step_series_widget
+        self.prev_img_btn = img_file_widget.previous_btn
+        self.next_img_btn = img_file_widget.next_btn
+        self.image_browse_step_txt = img_file_widget.step_txt
+        self.img_browse_by_name_rb = img_file_widget.browse_by_name_rb
+        self.img_browse_by_time_rb = img_file_widget.browse_by_time_rb
         self.img_filename_txt = img_file_widget.file_txt
         self.img_directory_txt = img_file_widget.directory_txt
         self.img_directory_btn = img_file_widget.directory_btn
@@ -114,11 +119,11 @@ class IntegrationWidget(QtWidgets.QWidget):
         pattern_file_widget = self.integration_control_widget.pattern_control_widget.file_widget
         self.pattern_load_btn = pattern_file_widget.load_btn
         self.pattern_autocreate_cb = pattern_file_widget.file_cb
-        self.pattern_previous_btn = pattern_file_widget.step_file_widget.previous_btn
-        self.pattern_next_btn = pattern_file_widget.step_file_widget.next_btn
-        self.pattern_browse_step_txt = pattern_file_widget.step_file_widget.step_txt
-        self.pattern_browse_by_name_rb = pattern_file_widget.step_file_widget.browse_by_name_rb
-        self.pattern_browse_by_time_rb = pattern_file_widget.step_file_widget.browse_by_time_rb
+        self.pattern_previous_btn = pattern_file_widget.previous_btn
+        self.pattern_next_btn = pattern_file_widget.next_btn
+        self.pattern_browse_step_txt = pattern_file_widget.step_txt
+        self.pattern_browse_by_name_rb = pattern_file_widget.browse_by_name_rb
+        self.pattern_browse_by_time_rb = pattern_file_widget.browse_by_time_rb
         self.pattern_filename_txt = pattern_file_widget.file_txt
         self.pattern_directory_txt = pattern_file_widget.directory_txt
         self.pattern_directory_btn = pattern_file_widget.directory_btn
@@ -197,9 +202,6 @@ class IntegrationWidget(QtWidgets.QWidget):
         self.automatic_binning_cb = options_control_widget.bin_count_cb
         self.correct_solid_angle_cb = options_control_widget.correct_solid_angle_cb
         self.supersampling_sb = options_control_widget.supersampling_sb
-        self.oned_full_range_btn = options_control_widget.oned_full_toggle_btn
-        self.oned_azimuth_min_txt = options_control_widget.oned_azimuth_min_txt
-        self.oned_azimuth_max_txt = options_control_widget.oned_azimuth_max_txt
 
         self.mouse_x_lbl = self.integration_status_widget.mouse_pos_widget.cur_pos_widget.x_pos_lbl
         self.mouse_y_lbl = self.integration_status_widget.mouse_pos_widget.cur_pos_widget.y_pos_lbl

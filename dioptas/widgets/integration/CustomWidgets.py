@@ -77,7 +77,7 @@ class MouseUnitCurrentAndClickedWidget(QtWidgets.QWidget):
     def __init__(self, clicked_color):
         super(MouseUnitCurrentAndClickedWidget, self).__init__()
         self._layout = QtWidgets.QVBoxLayout()
-        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setContentsMargins(0,0,0,0)
         self._layout.setSpacing(0)
 
         self.cur_unit_widget = MouseUnitWidget()
@@ -131,28 +131,33 @@ class BrowseFileWidget(QtWidgets.QGroupBox):
 
         self._layout = QtWidgets.QGridLayout()
         self._layout.setContentsMargins(5, 8, 5, 7)
-        # self._layout.setSpacing(3)
+        self._layout.setSpacing(5)
 
         self.load_btn = FlatButton('Load {}(s)'.format(files))
         self.file_cb = QtWidgets.QCheckBox(checkbox_text)
-
-        self._load_layout = QtWidgets.QVBoxLayout()
-        self._load_layout.setContentsMargins(5, 0, 0, 5)
-        self._load_layout.addWidget(self.load_btn)
-        self._load_layout.addWidget(self.file_cb)
-
-        self._layout.addLayout(self._load_layout, 0, 0, 2, 1)
-
+        self.next_btn = FlatButton('>')
+        self.previous_btn = FlatButton('<')
+        self.step_txt = QtWidgets.QLineEdit('1')
+        self.step_txt.setValidator(QtGui.QIntValidator())
+        self.browse_by_name_rb = QtWidgets.QRadioButton('By Name')
+        self.browse_by_name_rb.setChecked(True)
+        self.browse_by_time_rb = QtWidgets.QRadioButton('By Time')
         self.directory_txt = QtWidgets.QLineEdit('')
         self.directory_btn = FlatButton('...')
         self.file_txt = QtWidgets.QLineEdit('')
 
-        self.step_file_widget = StepFileWidget()
-        self._layout.addWidget(self.step_file_widget, 0, 1, 2, 2)
-        self.step_series_widget = StepFrameWidget()
-        self._layout.addWidget(self.step_series_widget, 0, 3, 2, 2)
+        self._layout.addWidget(self.load_btn, 0, 0)
+        self._layout.addWidget(self.file_cb, 1, 0)
 
-        self.step_series_widget.setVisible(False)
+        self._layout.addWidget(self.previous_btn, 0, 1)
+        self._layout.addWidget(self.next_btn, 0, 2)
+        self._step_layout = QtWidgets.QHBoxLayout()
+        self._step_layout.addWidget(LabelAlignRight('Step:'))
+        self._step_layout.addWidget(self.step_txt)
+        self._layout.addLayout(self._step_layout, 1, 1, 1, 2)
+
+        self._layout.addWidget(self.browse_by_name_rb, 0, 3)
+        self._layout.addWidget(self.browse_by_time_rb, 1, 3)
 
         self._layout.addWidget(self.file_txt, 2, 0, 1, 5)
         self._directory_layout = QtWidgets.QHBoxLayout()
@@ -160,7 +165,7 @@ class BrowseFileWidget(QtWidgets.QGroupBox):
         self._directory_layout.addWidget(self.directory_btn)
         self._layout.addLayout(self._directory_layout, 3, 0, 1, 5)
         self._layout.addItem(QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Maximum,
-                                                   QtWidgets.QSizePolicy.Minimum), 1, 5)
+                                 QtWidgets.QSizePolicy.Minimum), 1, 5)
 
         self.setLayout(self._layout)
 
@@ -169,25 +174,39 @@ class BrowseFileWidget(QtWidgets.QGroupBox):
     def style_widgets(self):
         self.load_btn.setMaximumWidth(120)
         self.load_btn.setMinimumWidth(120)
-        self.load_btn.setMinimumHeight(22)
-
         small_btn_width = 35
+
+        self.next_btn.setMaximumWidth(small_btn_width)
+        self.previous_btn.setMaximumWidth(small_btn_width)
         self.directory_btn.setMaximumWidth(small_btn_width)
+        self.next_btn.setMinimumWidth(small_btn_width)
+        self.previous_btn.setMinimumWidth(small_btn_width)
         self.directory_btn.setMinimumWidth(small_btn_width)
 
+        self.step_txt.setMaximumWidth(30)
+
         self.setStyleSheet("""
-               QPushButton {
-                   height: 22 px;
-               }
-               """)
+        QPushButton {
+            min-height: 22 px;
+        }
+        """)
 
 
-class StepWidget(QtWidgets.QWidget):
-    """Widget with buttons to step a number up and down and a Spinbox with the step size"""
+class StepBatchWidget(QtWidgets.QWidget):
+    """
+    Widget to navigate across frame in the batch
+
+    Widget contains:
+        buttons: next, previous
+        slider
+        fields: step, min, max, current
+    """
+    switch_frame = QtCore.Signal(int)
+
     iteration_name = ''
 
     def __init__(self):
-        super(StepWidget, self).__init__()
+        super(StepBatchWidget, self).__init__()
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
         self.small_btn_max_width = 50
@@ -204,9 +223,20 @@ class StepWidget(QtWidgets.QWidget):
         self.next_btn.setToolTip('Loads next {}'.format(self.iteration_name))
         self.previous_btn = FlatButton('<')
         self.previous_btn.setToolTip(('Loads previous {}'.format(self.iteration_name)))
+
+        self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+
         self.step_txt = QtWidgets.QSpinBox()
         self.step_txt.setValue(1)
         self.step_txt.setRange(1, 10000)
+
+        self.stop_txt = QtWidgets.QSpinBox()
+        self.stop_txt.setValue(0)
+        self.stop_txt.setRange(0, 99000)
+
+        self.start_txt = QtWidgets.QSpinBox()
+        self.start_txt.setValue(0)
+        self.start_txt.setRange(0, 99000)
 
         self.next_btn.setMaximumWidth(self.small_btn_max_width)
         self.previous_btn.setMaximumWidth(self.small_btn_max_width)
@@ -216,39 +246,26 @@ class StepWidget(QtWidgets.QWidget):
 
         self._navigator_layout = QtWidgets.QGridLayout()
         self._navigator_layout.addWidget(self.previous_btn, 0, 0)
-        self._navigator_layout.addWidget(self.next_btn, 0, 1)
+        self._navigator_layout.addWidget(self.slider, 0, 1)
+        self._navigator_layout.addWidget(self.next_btn, 0, 2)
+
         self._step_layout = QtWidgets.QHBoxLayout()
+        self._step_layout.addWidget(LabelAlignRight('Start:'))
+        self._step_layout.addWidget(self.start_txt)
+        self._step_layout.addWidget(LabelAlignRight('Stop:'))
+        self._step_layout.addWidget(self.stop_txt)
         self._step_layout.addWidget(LabelAlignRight('Step:'))
         self._step_layout.addWidget(self.step_txt)
-        self._navigator_layout.addLayout(self._step_layout, 1, 0, 1, 2)
+        self._navigator_layout.addLayout(self._step_layout, 1, 0, 1, 3)
         self._layout.addLayout(self._navigator_layout)
 
-
-class StepFileWidget(StepWidget):
-    iteration_name = 'file'
-
-    def __init__(self):
-        super(StepFileWidget, self).__init__()
-        self.browse_by_name_rb = QtWidgets.QRadioButton('By Name')
-        self.browse_by_name_rb.setChecked(True)
-        self.browse_by_time_rb = QtWidgets.QRadioButton('By Time')
-
-        self._step_by_layout = QtWidgets.QVBoxLayout()
-        self._step_by_layout.addWidget(self.browse_by_name_rb)
-        self._step_by_layout.addWidget(self.browse_by_time_rb)
-        self._layout.addLayout(self._step_by_layout)
-
-
-class StepFrameWidget(StepWidget):
-    iteration_name = 'frame'
-
-    def __init__(self):
-        super(StepFrameWidget, self).__init__()
         self.pos_txt = QtWidgets.QLineEdit()
         self.pos_validator = QtGui.QIntValidator(1, 1)
+        self.pos_txt.setText('0')
         self.pos_txt.setValidator(self.pos_validator)
         self.pos_txt.setToolTip('Currently loaded frame')
         self.pos_label = QtWidgets.QLabel('Frame:')
+        self.pos_label.setToolTip("Number of frames: integrated/raw")
         self.pos_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignBottom)
 
         self._pos_layout = QtWidgets.QVBoxLayout()
@@ -257,3 +274,116 @@ class StepFrameWidget(StepWidget):
         self._layout.addLayout(self._pos_layout)
 
         self.pos_txt.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Maximum)
+
+        self.next_btn.clicked.connect(self.process_next_img)
+        self.previous_btn.clicked.connect(self.process_prev_img)
+        self.pos_txt.editingFinished.connect(self.process_pos_img)
+        self.slider.sliderReleased.connect(self.process_slider)
+
+    def process_next_img(self):
+        step = self.step_txt.value()
+        stop = self.stop_txt.value()
+        pos = int(self.pos_txt.text())
+        y = pos + step
+        if y > stop:
+            return
+        self.pos_txt.setText(str(y))
+        self.slider.setValue(y)
+        self.switch_frame.emit(y)
+
+    def process_prev_img(self):
+        step = self.step_txt.value()
+        start = self.start_txt.value()
+        pos = int(self.pos_txt.text())
+        y = pos - step
+        if y < start:
+            return
+        self.pos_txt.setText(str(y))
+        self.slider.setValue(y)
+        self.switch_frame.emit(y)
+
+    def process_pos_img(self):
+        y = int(self.pos_txt.text())
+        self.pos_txt.setText(str(y))
+        self.slider.setValue(y)
+        self.switch_frame.emit(y)
+
+    def process_slider(self):
+        y = self.slider.value()
+        self.pos_txt.setText(str(y))
+        self.switch_frame.emit(y)
+
+    def get_image_range(self):
+        step = self.step_txt.value()
+        stop = self.stop_txt.value()
+        start = self.start_txt.value()
+        return start, stop, step
+
+
+class FileViewWidget(QtWidgets.QWidget):
+    """
+    Widget to show raw files, calibration and mask files
+
+    Widget contains:
+        QTLine: calibration file
+        QTLine: mask file
+        QTreeView: raw files
+    """
+
+    iteration_name = ''
+
+    def __init__(self):
+        super(FileViewWidget, self).__init__()
+
+        self._layout = QtWidgets.QVBoxLayout()
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+
+        self.cal_file = QtWidgets.QLabel(
+            '<span style="background: #3C3C3C; color: white;" >Calibration file:</span> undefined')
+        self.mask_file = QtWidgets.QLabel(
+            '<span style="background: #3C3C3C; color: white;" >Mask file:</span> undefined')
+
+        self._layout.addWidget(self.cal_file)
+        self._layout.addWidget(self.mask_file)
+
+        self.treeView = QtWidgets.QTreeView()
+        self.treeView.setObjectName('treeView')
+        self.setObjectName("lala")
+
+        self.tree_model = QtGui.QStandardItemModel()
+        self.treeView.setModel(self.tree_model)
+        self.treeView.setColumnWidth(0, 400)
+        self._layout.addWidget(self.treeView)
+
+        self.setLayout(self._layout)
+
+        self.setStyleSheet("""
+        #pattern_frame, #treeView, QLabel, #lala {
+                        background: black;
+                        color: yellow;
+                    }
+        """)
+
+    def set_raw_files(self, files, images):
+        self.tree_model.clear()
+        self.tree_model.setColumnCount(2)
+        self.tree_model.setHorizontalHeaderLabels(["Raw file name", "N images"])
+        self.treeView.setColumnWidth(0, 400)
+
+        for i, file in enumerate(files):
+            self.tree_model.appendRow(QtGui.QStandardItem(f"{file}"))
+            self.tree_model.setItem(i, 1, QtGui.QStandardItem(f"{images[i]}"))
+
+    def set_cal_file(self, file_path):
+        if file_path is None:
+            file_path = 'undefined'
+        self.cal_file.setText(f"<span style='background: #3C3C3C; color: white;' >Calibration file:</span> {file_path}")
+        self.cal_file.setToolTip("Calibration used for integration")
+
+    def set_mask_file(self, file_path):
+        if file_path is None:
+            file_path = 'undefined'
+        self.mask_file.setText(f"<span style='background: #3C3C3C; color: white;' >Mask file:</span> {file_path}")
+        self.mask_file.setToolTip("Mask used for integration")
+

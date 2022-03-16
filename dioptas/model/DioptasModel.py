@@ -28,7 +28,7 @@ import h5py
 from .util import jcpds
 from .util import Pattern
 from .Configuration import Configuration
-from . import ImgModel, CalibrationModel, MaskModel, PhaseModel, PatternModel, OverlayModel, MapModel
+from . import ImgModel, CalibrationModel, MaskModel, PhaseModel, PatternModel, OverlayModel, MapModel, BatchModel
 from .. import __version__
 
 
@@ -290,6 +290,13 @@ class DioptasModel(QtCore.QObject):
         :rtype: PhaseModel
         """
         return self._phase_model
+
+    @property
+    def batch_model(self):
+        """
+        :rtype: BatchModel
+        """
+        return self.configurations[self.configuration_ind].batch_model
 
     @property
     def use_mask(self):

@@ -33,7 +33,7 @@ from qtpy import QtCore
 from skimage.measure import find_contours
 
 from .. import calibrants_path
-from .util.HelperModule import get_base_name
+from .util.HelperModule import get_base_name, get_partial_index
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -315,7 +315,7 @@ class CalibrationModel(QtCore.QObject):
         self.pattern_geometry.reset()
 
     def integrate_1d(self, num_points=None, mask=None, polarization_factor=None, filename=None,
-                     unit='2th_deg', method='csr', azi_range=None):
+                     unit='2th_deg', method='csr'):
         if np.sum(mask) == self.img_model.img_data.shape[0] * self.img_model.img_data.shape[1]:
             # do not perform integration if the image is completely masked...
             return self.tth, self.int
@@ -339,7 +339,6 @@ class CalibrationModel(QtCore.QObject):
                 self.tth, self.int = self.pattern_geometry.integrate1d(self.img_model.img_data, num_points,
                                                                        method=method,
                                                                        unit='2th_deg',
-                                                                       azimuth_range=azi_range,
                                                                        mask=mask,
                                                                        polarization_factor=polarization_factor,
                                                                        correctSolidAngle=self.correct_solid_angle,
@@ -348,7 +347,6 @@ class CalibrationModel(QtCore.QObject):
                 self.tth, self.int = self.pattern_geometry.integrate1d(self.img_model.img_data, num_points,
                                                                        method='csr',
                                                                        unit='2th_deg',
-                                                                       azimuth_range=azi_range,
                                                                        mask=mask,
                                                                        polarization_factor=polarization_factor,
                                                                        correctSolidAngle=self.correct_solid_angle,
@@ -360,7 +358,6 @@ class CalibrationModel(QtCore.QObject):
                 self.tth, self.int = self.pattern_geometry.integrate1d(self.img_model.img_data, num_points,
                                                                        method=method,
                                                                        unit=unit,
-                                                                       azimuth_range=azi_range,
                                                                        mask=mask,
                                                                        polarization_factor=polarization_factor,
                                                                        correctSolidAngle=self.correct_solid_angle,
@@ -369,7 +366,6 @@ class CalibrationModel(QtCore.QObject):
                 self.tth, self.int = self.pattern_geometry.integrate1d(self.img_model.img_data, num_points,
                                                                        method='csr',
                                                                        unit=unit,
-                                                                       azimuth_range=azi_range,
                                                                        mask=mask,
                                                                        polarization_factor=polarization_factor,
                                                                        correctSolidAngle=self.correct_solid_angle,
@@ -410,6 +406,26 @@ class CalibrationModel(QtCore.QObject):
         self.cake_tth = res[1]
         self.cake_azi = res[2]
         return self.cake_img
+
+    def cake_integral(self, tth, bins=1):
+        """
+        calculates a histogram of the cake in tth direction, thus the result will be pixel vs intensity
+        :param tth: tth value in A^-1
+        :param bins: number of bins for summing
+        :return: cake_azimuth_pixel, intensity
+        """
+        tth_partial_index = get_partial_index(self.cake_tth, tth)
+        tth_center = tth_partial_index + 0.5
+        left = tth_center - 0.5 * bins
+        right = tth_center + 0.5 * bins
+
+        y1 = abs(np.ceil(left) - left) * self.cake_img[:, int(np.floor(left))]
+        y2 = np.sum(self.cake_img[:, int(np.ceil(left)): int(np.floor(right))], axis=1)
+        y3 = (right - np.floor(right)) * self.cake_img[:, int(np.floor(right))]
+
+        x = np.array(range(len(self.cake_azi))) + 0.5
+        y = (y1 + y2 + y3) / bins
+        return x, y
 
     def create_point_array(self, points, points_ind):
         res = []
