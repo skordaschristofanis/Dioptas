@@ -100,6 +100,8 @@ class PatternWidget(QtCore.QObject):
         self.pattern_plot.removeItem(self.pos_line)
 
     def set_pos_line(self, x):
+        if not isinstance(x, float):
+            x = x[0]
         self.pos_line.setPos(x)
 
     def get_pos_line(self):
