@@ -57,8 +57,8 @@ class CalibrationModel(QtCore.QObject):
         self.pattern_geometry.wavelength = 0.3344e-10
         self.start_values = {'dist': 200e-3,
                              'wavelength': 0.3344e-10,
-                             'pixel_width': 79e-6,
-                             'pixel_height': 79e-6,
+                             'pixel_width': 172e-6,
+                             'pixel_height': 172e-6,
                              'polarization_factor': 0.99}
         self.orig_pixel1 = 79e-6
         self.orig_pixel2 = 79e-6
