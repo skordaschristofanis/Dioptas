@@ -54,6 +54,10 @@ from ._desktop_shortcuts import make_shortcut
 
 from .widgets.UtilityWidgets import ErrorMessageBox
 
+# High DPI support
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+
 
 def excepthook(exc_type, exc_value, traceback_obj):
     """
