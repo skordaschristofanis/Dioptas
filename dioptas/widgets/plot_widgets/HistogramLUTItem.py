@@ -3,7 +3,7 @@
 # Principal author: Clemens Prescher (clemens.prescher@gmail.com)
 # Copyright (C) 2014-2019 GSECARS, University of Chicago, USA
 # Copyright (C) 2015-2018 Institute for Geology and Mineralogy, University of Cologne, Germany
-# Copyright (C) 2019 DESY, Hamburg, Germany
+# Copyright (C) 2019-2020 DESY, Hamburg, Germany
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -37,13 +37,17 @@ __all__ = ['HistogramLUTItem']
 # add grey_inverse to the list of color gradients:
 pyqtgraph.graphicsItems.GradientEditorItem.Gradients['grey_inverse'] = \
     {'ticks': [(0.0, (255, 255, 255, 255)), (1.0, (0, 0, 0, 255))], 'mode': 'rgb'}
+
+pyqtgraph.graphicsItems.GradientEditorItem.Gradients['jet'] = \
+    {'ticks': [(0.0, (0, 0, 128, 255)), (0.1, (0, 0, 255, 255)),
+               (0.4, (0, 255, 255, 255)), (0.5, (0, 255, 0, 255)),
+               (0.6, (255, 255, 0, 255)), (0.9, (255, 0, 0, 255)), (1.0, (128, 0, 0, 255))], 'mode': 'rgb'}
 pyqtgraph.graphicsItems.GradientEditorItem.Gradients['red'] = \
     {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}
 pyqtgraph.graphicsItems.GradientEditorItem.Gradients['green'] = \
     {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 255, 0, 255))], 'mode': 'rgb'}
 pyqtgraph.graphicsItems.GradientEditorItem.Gradients['blue'] = \
     {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}
-
 # set the error handling for numpy
 np.seterr(divide='ignore', invalid='ignore')
 
@@ -52,8 +56,7 @@ class HistogramLUTItem(GraphicsWidget):
     """
     This is a graphicsWidget which provides controls for adjusting the display of an image.
     Includes:
-
-    - Image histogram 
+    - Image histogram
     - Movable region over histogram to select black/white levels
     - Gradient editor to define color lookup table for single-channel images
     """
@@ -209,9 +212,6 @@ class HistogramLUTItem(GraphicsWidget):
         self.imageChanged()
         # self.vb.autoRange()
 
-    def viewRangeChanged(self):
-        self.update()
-
     def gradientChanged(self):
         if self.imageItem is not None:
             if self.gradient.isLookupTrivial():
@@ -235,10 +235,7 @@ class HistogramLUTItem(GraphicsWidget):
         return self.lut
 
     def regionChanged(self):
-        # if self.imageItem is not None:
-        # self.imageItem.setLevels(self.region.getRegion())
         self.sigLevelChangeFinished.emit(self)
-        # self.update()
 
     def regionChanging(self):
         if self.imageItem is not None:
@@ -246,13 +243,24 @@ class HistogramLUTItem(GraphicsWidget):
         self.sigLevelsChanged.emit(self)
         self.update()
 
-    def imageChanged(self, autoRange=False):
-        hist_x, hist_y = list(self.imageItem.getHistogram(bins=1000))
-        self.hist_x = hist_x
-        self.hist_y = hist_y
+    def imageChanged(self, autoRange=False, img_data=None):
+
+        if img_data is not None:
+            hist = np.histogram(img_data, bins=3000)
+            hist_x, hist_y = hist[1][:-1], hist[0]
+        else:
+            hist_x, hist_y = list(self.imageItem.getHistogram(bins=3000))
 
         if hist_x is None:
             return
+
+        hist_x, hist_y = np.array(hist_x), np.array(hist_y)
+
+        hist_x = hist_x[np.where(hist_y>0)]
+        hist_y = hist_y[np.where(hist_y>0)]
+
+        self.hist_x = hist_x
+        self.hist_y = hist_y
 
         hist_y_log = np.log(hist_y[1:])
         hist_x_log = np.log(hist_x[1:])
@@ -271,6 +279,8 @@ class HistogramLUTItem(GraphicsWidget):
 
     def setLevels(self, mn, mx):
         self.region.setRegion([mn, mx])
+        if self.imageItem is not None:
+            self.imageItem.setLevels(np.exp(self.region.getRegion()))
 
     def empty_function(self, *args):
         pass
@@ -291,7 +301,6 @@ class LogarithmRegionItem(LinearRegionItem):
 
     def setRegion(self, rgn):
         """Set the values for the edges of the region.
-
         ==============   ==============================================
         **Arguments:**
         rgn              A list or tuple of the lower and upper values.
