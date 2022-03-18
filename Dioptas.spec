@@ -34,10 +34,18 @@ site_packages_path = get_python_lib()
 import pyFAI
 import matplotlib
 import lib2to3
+import epics
+import pyshortcuts
+import OpenGL
+import Cython
 
 pyFAI_path = os.path.dirname(pyFAI.__file__)
 matplotlib_path = os.path.dirname(matplotlib.__file__)
 lib2to3_path = os.path.dirname(lib2to3.__file__)
+epics_path = os.path.dirname(epics.__file__)
+pyshortcuts_path = os.path.dirname(pyshortcuts.__file__)
+OpenGL_path = os.path.dirname(OpenGL.__file__)
+Cython_path = os.path.dirname(Cython.__file__)
 
 
 extra_datas = [
@@ -46,6 +54,10 @@ extra_datas = [
     (os.path.join(pyFAI_path, "utils"), "pyFAI/utils"),
     (os.path.join(lib2to3_path, 'Grammar.txt'), 'lib2to3/'),
     (os.path.join(lib2to3_path, 'PatternGrammar.txt'), 'lib2to3/'),
+    (epics_path, 'epics/'),
+    (pyshortcuts_path, 'pyshortcuts/'),
+    (OpenGL_path, 'OpenGL/'),
+    (Cython_path, 'Cython/'),
 ]
 
 binaries = []
