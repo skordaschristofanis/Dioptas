@@ -38,6 +38,7 @@ import epics
 import pyshortcuts
 import OpenGL
 import Cython
+import silx
 
 pyFAI_path = os.path.dirname(pyFAI.__file__)
 matplotlib_path = os.path.dirname(matplotlib.__file__)
@@ -46,6 +47,7 @@ epics_path = os.path.dirname(epics.__file__)
 pyshortcuts_path = os.path.dirname(pyshortcuts.__file__)
 OpenGL_path = os.path.dirname(OpenGL.__file__)
 Cython_path = os.path.dirname(Cython.__file__)
+silx_path = os.path.dirname(silx.__file__)
 
 
 extra_datas = [
@@ -58,6 +60,7 @@ extra_datas = [
     (pyshortcuts_path, 'pyshortcuts/'),
     (OpenGL_path, 'OpenGL/'),
     (Cython_path, 'Cython/'),
+    (silx_path, 'silx/'),
 ]
 
 binaries = []
