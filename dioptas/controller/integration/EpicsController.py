@@ -55,6 +55,10 @@ class EpicsController(object):
         self.ver_motor_name = epics_config['sample_position_y']
         self.focus_motor_name = epics_config['sample_position_z']
         self.omega_motor_name = epics_config['sample_position_omega']
+        self.ds_mirror = epics_config['ds_mirror']
+        self.us_mirror = epics_config['us_mirror']
+        self.microscope = epics_config['microscope']
+        self.station = epics_config['station']
 
         self.connect_signals()
 
@@ -169,15 +173,25 @@ class EpicsController(object):
         msg_box.exec_()
         return msg_box.result()
 
-    @staticmethod
-    def check_conditions():
-        if int(epics.caget('13IDD:m24.RBV')) > -105:
-            return False
-        elif int(epics.caget('13IDD:m23.RBV')) > -105:
-            return False
-        elif int(epics.caget('13IDD:m67.RBV')) > -65:
-            return False
-        return True
+    def check_conditions(self) -> bool:
+        if self.station == "13IDD":
+            # 13-IDD Mirrors and microscope check
+            if int(epics.caget(self.ds_mirror)) > -105:
+                return False
+            elif int(epics.caget(self.us_mirror)) > -105:
+                return False
+            elif int(epics.caget(self.microscope)) > -65:
+                return False
+            return True
+        else:
+            # 13-BMD Mirrors and microscope check
+            if int(epics.caget(self.ds_mirror)) < 40:
+                return False
+            elif int(epics.caget(self.us_mirror)) < 40:
+                return False
+            elif int(epics.caget(self.microscope)) > -70:
+                return False
+            return True
 
     def check_sample_point_distances(self, pos_x, pos_y, pos_z):
         cur_x = float(epics.caget(self.hor_motor_name + '.RBV', as_string=True))
